@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
+import logo from '@/assets/logo-hoom.png';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import PromoterForm from '@/components/PromoterForm';
@@ -44,12 +45,15 @@ export default function PromotersPage() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <div>
-          <h1 className="text-3xl font-bold text-primary">Gestión de Promotores</h1>
-          <p className="text-muted-foreground">Añade, edita y elimina promotores.</p>
+      <div className="flex justify-between items-center mb-6">
+        <img src={logo} alt="Hoom Properties Logo" className="h-12" />
+        <div className="flex items-center gap-4">
+          <div className="text-right">
+            <h1 className="text-2xl font-bold text-primary">Gestión de Promotores</h1>
+            <p className="text-sm text-muted-foreground">Añade, edita y elimina promotores.</p>
+          </div>
+          <Button onClick={() => { setSelectedPromoter(null); setIsDialogOpen(true); }}>Añadir Promotor</Button>
         </div>
-        <Button onClick={() => { setSelectedPromoter(null); setIsDialogOpen(true); }}>Añadir Promotor</Button>
       </div>
       <div className="border rounded-lg">
         <Table>

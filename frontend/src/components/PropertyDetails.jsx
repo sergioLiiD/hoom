@@ -51,6 +51,17 @@ export default function PropertyDetails({ property }) {
       </div>
 
       <div>
+        <h3 className="text-lg font-semibold">Detalles Principales</h3>
+        <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
+          <div className="font-semibold">Precio:</div>
+          <div>{property.price ? property.price.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' }) : 'No disponible'}</div>
+          
+          <div className="font-semibold">Fraccionamiento:</div>
+          <div>{property.fraccionamientos?.nombre || 'No especificado'}</div>
+        </div>
+      </div>
+
+      <div>
         <h3 className="text-lg font-semibold">Descripción</h3>
         <p className="text-sm text-muted-foreground mt-2 whitespace-pre-wrap">{property.description || "No hay descripción disponible."}</p>
       </div>

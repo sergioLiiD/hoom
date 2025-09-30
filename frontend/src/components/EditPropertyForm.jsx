@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { DialogFooter } from '@/components/ui/dialog';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 
-export default function EditPropertyForm({ property, promoters, onSave, onCancel }) {
+export default function EditPropertyForm({ property, promoters, fraccionamientos, onSave, onCancel }) {
   const [formData, setFormData] = useState({ 
     ...property, 
     latitude: property.latitude || 19.4326, 
@@ -82,10 +82,12 @@ export default function EditPropertyForm({ property, promoters, onSave, onCancel
     const preparedData = {
       ...formData,
       promoter_id: formData.promoter_id?.id || formData.promoter_id,
+      fraccionamiento_id: formData.fraccionamiento_id?.id || formData.fraccionamiento_id,
     };
 
-    // Remove the nested promoter object if it exists
+    // Remove nested objects if they exist
     delete preparedData.promoter;
+    delete preparedData.fraccionamientos;
 
     const { error } = await supabase
       .from('properties')
@@ -123,6 +125,18 @@ export default function EditPropertyForm({ property, promoters, onSave, onCancel
             <SelectContent>
               <SelectItem value={null}>Sin Promotor</SelectItem>
               {promoters.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Fraccionamiento</Label>
+          <Select onValueChange={(value) => handleChange('fraccionamiento_id', value)} value={formData.fraccionamiento_id?.id || formData.fraccionamiento_id}>
+            <SelectTrigger>
+              <SelectValue placeholder="Seleccionar Fraccionamiento" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={null}>Sin Fraccionamiento</SelectItem>
+              {fraccionamientos.map(f => <SelectItem key={f.id} value={f.id}>{f.nombre}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>

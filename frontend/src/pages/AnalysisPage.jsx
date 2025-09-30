@@ -7,13 +7,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import PropertyDetails from '@/components/PropertyDetails';
+import logo from '@/assets/logo-hoom.png';
 
 const AnalysisPage = () => {
   const [filters, setFilters] = useState({});
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [avgPrice, setAvgPrice] = useState(0);
-  const [avgPricePerSqm, setAvgPricePerSqm] = useState(0);
+  const [medianPricePerSqm, setMedianPricePerSqm] = useState(0);
+  const [medianPrice, setMedianPrice] = useState(0);
   const [viewingProperty, setViewingProperty] = useState(null);
 
   const parsePrompt = (prompt) => {
@@ -75,7 +76,7 @@ const AnalysisPage = () => {
   useEffect(() => {
     const handleFilter = async () => {
       setLoading(true);
-      let query = supabase.from('properties').select('*');
+      let query = supabase.from('properties').select('*, promoter_id(*), fraccionamientos (nombre)');
 
       if (filters.minPrice) query = query.gte('price', filters.minPrice);
       if (filters.maxPrice) query = query.lte('price', filters.maxPrice);
@@ -85,6 +86,7 @@ const AnalysisPage = () => {
       if (filters.minLand) query = query.gte('land_area_m2', filters.minLand);
       if (filters.exactLevels) query = query.eq('levels', filters.exactLevels);
       if (filters.isNew) query = query.eq('is_new_property', true);
+      if (filters.fraccionamiento_id) query = query.eq('fraccionamiento_id', filters.fraccionamiento_id);
 
       const { data, error } = await query;
 
@@ -95,22 +97,27 @@ const AnalysisPage = () => {
         if (data && data.length > 0) {
           const pricedProperties = data.filter(p => p.price != null);
           if (pricedProperties.length > 0) {
-            const total = pricedProperties.reduce((acc, p) => acc + p.price, 0);
-            setAvgPrice(total / pricedProperties.length);
+
+            const sortedPrices = pricedProperties.map(p => p.price).sort((a, b) => a - b);
+            const mid = Math.floor(sortedPrices.length / 2);
+            const median = sortedPrices.length % 2 !== 0 ? sortedPrices[mid] : (sortedPrices[mid - 1] + sortedPrices[mid]) / 2;
+            setMedianPrice(median);
 
             const propertiesWithSqm = pricedProperties.filter(p => p.construction_area_m2 > 0);
             if (propertiesWithSqm.length > 0) {
-              const totalSqmPrice = propertiesWithSqm.reduce((acc, p) => acc + (p.price / p.construction_area_m2), 0);
-              setAvgPricePerSqm(totalSqmPrice / propertiesWithSqm.length);
+              const pricesPerSqm = propertiesWithSqm.map(p => p.price / p.construction_area_m2).sort((a, b) => a - b);
+              const midSqm = Math.floor(pricesPerSqm.length / 2);
+              const medianSqm = pricesPerSqm.length % 2 !== 0 ? pricesPerSqm[midSqm] : (pricesPerSqm[midSqm - 1] + pricesPerSqm[midSqm]) / 2;
+              setMedianPricePerSqm(medianSqm);
             } else {
-              setAvgPricePerSqm(0);
+              setMedianPricePerSqm(0);
             }
           } else {
-            setAvgPrice(0);
-            setAvgPricePerSqm(0);
+            setMedianPrice(0);
+            setMedianPricePerSqm(0);
           }
         } else {
-          setAvgPrice(0);
+          setMedianPrice(0);
         }
       }
       setLoading(false);
@@ -121,7 +128,10 @@ const AnalysisPage = () => {
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Análisis de Mercado</h1>
+      <div className="flex justify-between items-center mb-6">
+        <img src={logo} alt="Hoom Properties Logo" className="h-12" />
+        <h1 className="text-2xl font-bold text-primary">Análisis de Mercado</h1>
+      </div>
       <ChatFilter onPromptSubmit={handlePromptSubmit} />
       <PropertyFilters filters={filters} setFilters={setFilters} onFilter={() => { /* Filtering is now automatic on filter change */ }} />
 
@@ -140,18 +150,18 @@ const AnalysisPage = () => {
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Precio Promedio</CardTitle>
+                <CardTitle className="text-sm font-medium">Precio Mediano</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{avgPrice.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}</div>
+                <div className="text-2xl font-bold">{medianPrice.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}</div>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Costo Promedio por m²</CardTitle>
+                <CardTitle className="text-sm font-medium">Costo Mediano por m²</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{avgPricePerSqm.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}</div>
+                <div className="text-2xl font-bold">{medianPricePerSqm.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}</div>
               </CardContent>
             </Card>
           </div>
@@ -161,28 +171,37 @@ const AnalysisPage = () => {
               <CardTitle>Resultados</CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
+              <div className="relative max-h-[600px] overflow-y-auto">
+                <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Foto</TableHead>
-                    <TableHead>Título</TableHead>
-                    <TableHead>Precio</TableHead>
-                    <TableHead>Habitaciones</TableHead>
-                    <TableHead>Baños</TableHead>
-                    <TableHead>Construcción (m²)</TableHead>
-                    <TableHead>Terreno (m²)</TableHead>
-                    <TableHead>1/2 Baños</TableHead>
-                    <TableHead>Niveles</TableHead>
-                    <TableHead>Acciones</TableHead>
+                  <TableRow className="sticky top-0">
+                    <TableHead className="bg-background">#</TableHead>
+                    <TableHead className="bg-background">Foto</TableHead>
+                    <TableHead className="bg-background">Título</TableHead>
+                    <TableHead className="bg-background">Promotor</TableHead>
+                    <TableHead className="bg-background">Fraccionamiento</TableHead>
+                    <TableHead className="bg-background">Portal</TableHead>
+                    <TableHead className="bg-background">Precio</TableHead>
+                    <TableHead className="bg-background">Habitaciones</TableHead>
+                    <TableHead className="bg-background">Baños</TableHead>
+                    <TableHead className="bg-background">Construcción (m²)</TableHead>
+                    <TableHead className="bg-background">Terreno (m²)</TableHead>
+                    <TableHead className="bg-background">1/2 Baños</TableHead>
+                    <TableHead className="bg-background">Niveles</TableHead>
+                    <TableHead className="bg-background">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {properties.map(prop => (
+                  {properties.map((prop, index) => (
                     <TableRow key={prop.id}>
+                      <TableCell>{index + 1}</TableCell>
                       <TableCell>
                         <img src={prop.photos?.[0] || 'https://via.placeholder.com/100x100.png?text=Sin+Foto'} alt={prop.title} className="h-12 w-12 object-cover rounded-md" referrerPolicy="no-referrer" />
                       </TableCell>
                       <TableCell>{prop.title}</TableCell>
+                      <TableCell>{prop.promoter_id?.name}</TableCell>
+                      <TableCell>{prop.fraccionamientos?.nombre}</TableCell>
+                      <TableCell>{prop.source_portal}</TableCell>
                       <TableCell>
                         <div>{prop.price ? prop.price.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' }) : 'No disponible'}</div>
                         {prop.price && prop.construction_area_m2 > 0 && (
@@ -204,6 +223,7 @@ const AnalysisPage = () => {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -216,7 +236,7 @@ const AnalysisPage = () => {
               <SheetTitle>{viewingProperty.title}</SheetTitle>
               <SheetDescription>{viewingProperty.location_text}</SheetDescription>
             </SheetHeader>
-            <PropertyDetails property={viewingProperty} />
+            {viewingProperty && <PropertyDetails property={viewingProperty} />}
           </SheetContent>
         </Sheet>
       )}

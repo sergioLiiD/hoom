@@ -12,7 +12,7 @@ import PropertyListItem from "@/components/PropertyListItem";
 import PropertyDetails from "@/components/PropertyDetails";
 import PhotoEditor from "@/components/PhotoEditor";
 
-export default function PropertyList({ properties, promoters, onDataChange, view }) {
+export default function PropertyList({ properties, promoters, fraccionamientos, onDataChange, view }) {
   const [editingProperty, setEditingProperty] = useState(null);
   const [viewingProperty, setViewingProperty] = useState(null);
   const [editingPhotosProperty, setEditingPhotosProperty] = useState(null);
@@ -137,7 +137,7 @@ export default function PropertyList({ properties, promoters, onDataChange, view
               <SheetTitle>{viewingProperty.title}</SheetTitle>
               <SheetDescription>{viewingProperty.location_text}</SheetDescription>
             </SheetHeader>
-            <PropertyDetails property={viewingProperty} />
+            {viewingProperty && <PropertyDetails property={viewingProperty} />}
           </SheetContent>
         </Sheet>
       )}
@@ -151,6 +151,7 @@ export default function PropertyList({ properties, promoters, onDataChange, view
             <EditPropertyForm 
               property={editingProperty} 
               promoters={promoters} 
+              fraccionamientos={fraccionamientos}
               onSave={handleSave} 
               onCancel={() => setEditingProperty(null)} 
             />
