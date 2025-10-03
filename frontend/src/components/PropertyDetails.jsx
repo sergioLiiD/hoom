@@ -1,6 +1,7 @@
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Card, CardContent } from "@/components/ui/card";
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { Home, Trees, Building2, Building, Store, Warehouse } from 'lucide-react';
 
 export default function PropertyDetails({ property }) {
   const hasCoordinates = property.latitude && property.longitude;
@@ -53,11 +54,74 @@ export default function PropertyDetails({ property }) {
       <div>
         <h3 className="text-lg font-semibold">Detalles Principales</h3>
         <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
+          <div className="font-semibold">Tipo de Propiedad:</div>
+          <div className="flex items-center gap-2">
+            {property.property_type === 'casa' && <>
+              <Home className="h-5 w-5 text-blue-600" />
+              <span>Casa</span>
+            </>}
+            {property.property_type === 'terreno' && <>
+              <Trees className="h-5 w-5 text-green-600" />
+              <span>Terreno</span>
+            </>}
+            {property.property_type === 'departamento' && <>
+              <Building2 className="h-5 w-5 text-purple-600" />
+              <span>Departamento</span>
+            </>}
+            {property.property_type === 'oficina' && <>
+              <Building className="h-5 w-5 text-gray-600" />
+              <span>Oficina</span>
+            </>}
+            {property.property_type === 'local_comercial' && <>
+              <Store className="h-5 w-5 text-amber-600" />
+              <span>Local Comercial</span>
+            </>}
+            {property.property_type === 'bodega' && <>
+              <Warehouse className="h-5 w-5 text-orange-600" />
+              <span>Bodega</span>
+            </>}
+            {!property.property_type && 'No especificado'}
+          </div>
+
           <div className="font-semibold">Precio:</div>
           <div>{property.price ? property.price.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' }) : 'No disponible'}</div>
           
           <div className="font-semibold">Fraccionamiento:</div>
           <div>{property.fraccionamientos?.nombre || 'No especificado'}</div>
+
+          {/* Área del terreno (para todos los tipos) */}
+          <div className="font-semibold">Área del Terreno:</div>
+          <div>{property.land_area_m2 ? `${property.land_area_m2} m²` : 'No disponible'}</div>
+          
+          {/* Campos para propiedades con construcción */}
+          {(property.property_type === 'casa' || property.property_type === 'departamento' || 
+            property.property_type === 'oficina' || property.property_type === 'local_comercial' || 
+            property.property_type === 'bodega') && (
+            <>
+              <div className="font-semibold">Área de Construcción:</div>
+              <div>{property.construction_area_m2 ? `${property.construction_area_m2} m²` : 'No disponible'}</div>
+            </>
+          )}
+          
+          {/* Campos para propiedades residenciales */}
+          {(property.property_type === 'casa' || property.property_type === 'departamento') && (
+            <>
+              <div className="font-semibold">Habitaciones:</div>
+              <div>{property.bedrooms || 'No disponible'}</div>
+              
+              <div className="font-semibold">Baños Completos:</div>
+              <div>{property.full_bathrooms || 'No disponible'}</div>
+              
+              <div className="font-semibold">Medios Baños:</div>
+              <div>{property.half_bathrooms || 'No disponible'}</div>
+              
+              <div className="font-semibold">Niveles:</div>
+              <div>{property.levels || 'No disponible'}</div>
+
+              <div className="font-semibold">Propiedad Nueva:</div>
+              <div>{property.is_new_property ? 'Sí' : 'No'}</div>
+            </>
+          )}
         </div>
       </div>
 

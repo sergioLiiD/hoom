@@ -5,6 +5,7 @@ import DashboardPage from "@/pages/DashboardPage";
 import PromotersPage from "@/pages/PromotersPage";
 import MapPage from "@/pages/MapPage";
 import AnalysisPage from "@/pages/AnalysisPage";
+import LandAnalysisPage from "@/pages/LandAnalysisPage";
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
         <Route path="/promoters" element={<Layout><PromotersPage /></Layout>} />
         <Route path="/map" element={<Layout><MapPage /></Layout>} />
         <Route path="/analysis" element={<Layout><AnalysisPage /></Layout>} />
+        <Route path="/land-analysis" element={<Layout><LandAnalysisPage /></Layout>} />
       </Routes>
     </Router>
   );

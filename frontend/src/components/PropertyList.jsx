@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { Bed, Bath, Car, Ruler, Building, Layers, MoreHorizontal } from 'lucide-react';
+import { Bed, Bath, Car, Ruler, Building, Layers, MoreHorizontal, Home, Trees, Building2, Store, Warehouse } from 'lucide-react';
 import Metric from "@/components/Metric";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
@@ -40,31 +40,49 @@ export default function PropertyList({ properties, promoters, fraccionamientos, 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {properties.map((property) => (
             <Card key={property.id} className="relative">
-              <CardHeader className="pt-10">
-                <div className="flex items-center justify-between">
-                  <CardTitle>{property.title || "Sin Título"}</CardTitle>
-                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${property.is_new_property ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
-                    {property.is_new_property ? 'Nueva' : 'Usada'}
-                  </span>
+              <CardHeader className="pt-6">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2 mr-2">
+                    {property.property_type === 'casa' && <Home className="h-5 w-5 flex-shrink-0 text-blue-600" />}
+                    {property.property_type === 'terreno' && <Trees className="h-5 w-5 flex-shrink-0 text-green-600" />}
+                    {property.property_type === 'departamento' && <Building2 className="h-5 w-5 flex-shrink-0 text-purple-600" />}
+                    {property.property_type === 'oficina' && <Building className="h-5 w-5 flex-shrink-0 text-gray-600" />}
+                    {property.property_type === 'local_comercial' && <Store className="h-5 w-5 flex-shrink-0 text-amber-600" />}
+                    {property.property_type === 'bodega' && <Warehouse className="h-5 w-5 flex-shrink-0 text-orange-600" />}
+                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${property.is_new_property ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
+                      {property.is_new_property ? 'Nueva' : 'Usada'}
+                    </span>
+                  </div>
                 </div>
+                <CardTitle className="text-base line-clamp-2 h-12 mb-2">
+                  {property.title || "Sin Título"}
+                </CardTitle>
                 <CardDescription as="div">
                   <div className="flex items-baseline">
                     <span className="font-bold text-lg text-primary">
                       {new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(property.price || 0)}
                     </span>
-                    {property.construction_area_m2 > 0 && (
+                    {/* Mostrar precio por m² según el tipo de propiedad */}
+                    {property.property_type === 'terreno' && property.land_area_m2 > 0 && (
                       <span className="text-xs text-muted-foreground ml-2">
-                        ({new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(property.price / property.construction_area_m2)}/m²)
+                        ({new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(property.price / property.land_area_m2)}/m² terreno)
+                      </span>
+                    )}
+                    {property.property_type !== 'terreno' && property.construction_area_m2 > 0 && (
+                      <span className="text-xs text-muted-foreground ml-2">
+                        ({new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(property.price / property.construction_area_m2)}/m² constr.)
                       </span>
                     )}
                   </div>
                   <p className="text-sm text-muted-foreground">{property.location_text}</p>
                 </CardDescription>
-                <CardAction>
-                  <a href={property.property_url} target="_blank" rel="noopener noreferrer">
-                    <Button size="xs">Ver Anuncio</Button>
-                  </a>
-                </CardAction>
+                <div className="mt-3">
+                  {property.property_url && (
+                    <a href={property.property_url} target="_blank" rel="noopener noreferrer" className="inline-block">
+                      <Button size="xs" variant="outline" className="w-full">Ver Anuncio Original</Button>
+                    </a>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
                 <img 
@@ -74,13 +92,29 @@ export default function PropertyList({ properties, promoters, fraccionamientos, 
                   referrerPolicy="no-referrer"
                 />
                 <div className="grid grid-cols-4 gap-y-2 gap-x-4 w-full text-sm text-muted-foreground">
-                  <Metric icon={<Ruler className="w-4 h-4 mr-1" />} value={property.construction_area_m2} unit="m² constr." />
-                  <Metric icon={<Layers className="w-4 h-4 mr-1" />} value={property.land_area_m2} unit="m² terr." />
-                  <Metric icon={<Bed className="w-4 h-4 mr-1" />} value={property.bedrooms} unit="rec." />
-                  <Metric icon={<Building className="w-4 h-4 mr-1" />} value={property.levels} unit="niv." />
-                  <Metric icon={<Bath className="w-4 h-4 mr-1" />} value={property.full_bathrooms} unit="baños" />
-                  <Metric icon={<Bath className="w-4 h-4 mr-1 opacity-60" />} value={property.half_bathrooms} unit="1/2 baños" />
-                  <Metric icon={<Car className="w-4 h-4 mr-1" />} value={property.parking_spaces} unit="estac." />
+                  {/* Métricas para terrenos */}
+                  {property.property_type === 'terreno' ? (
+                    <>
+                      <Metric icon={<Layers className="w-4 h-4 mr-1" />} value={property.land_area_m2} unit="m² terr." />
+                    </>
+                  ) : (
+                    <>
+                      {/* Métricas para propiedades con construcción */}
+                      <Metric icon={<Ruler className="w-4 h-4 mr-1" />} value={property.construction_area_m2} unit="m² constr." />
+                      <Metric icon={<Layers className="w-4 h-4 mr-1" />} value={property.land_area_m2} unit="m² terr." />
+                      
+                      {/* Métricas para propiedades residenciales */}
+                      {(property.property_type === 'casa' || property.property_type === 'departamento') && (
+                        <>
+                          <Metric icon={<Bed className="w-4 h-4 mr-1" />} value={property.bedrooms} unit="rec." />
+                          <Metric icon={<Building className="w-4 h-4 mr-1" />} value={property.levels} unit="niv." />
+                          <Metric icon={<Bath className="w-4 h-4 mr-1" />} value={property.full_bathrooms} unit="baños" />
+                          <Metric icon={<Bath className="w-4 h-4 mr-1 opacity-60" />} value={property.half_bathrooms} unit="1/2 baños" />
+                          <Metric icon={<Car className="w-4 h-4 mr-1" />} value={property.parking_spaces} unit="estac." />
+                        </>
+                      )}
+                    </>
+                  )}
                 </div>
               </CardContent>
               <CardFooter className="flex-col items-start">

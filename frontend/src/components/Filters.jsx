@@ -3,12 +3,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DatePicker } from "@/components/ui/date-picker";
 
 export default function Filters({ filters, setFilters, portals, promoters }) {
+  const propertyTypes = [
+    { value: 'casa', label: '🏠 Casa' },
+    { value: 'terreno', label: '🌳 Terreno' },
+    { value: 'departamento', label: '🏢 Departamento' },
+    { value: 'oficina', label: '🏢 Oficina' },
+    { value: 'local_comercial', label: '🏬 Local Comercial' },
+    { value: 'bodega', label: '🏭 Bodega' },
+  ];
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-6 gap-4 p-4 border rounded-lg bg-card">
+    <div className="grid grid-cols-1 md:grid-cols-7 gap-4 p-4 border rounded-lg bg-card">
       <Select onValueChange={(value) => handleFilterChange('portal', value)} defaultValue={filters.portal}>
         <SelectTrigger>
           <SelectValue placeholder="Portal de Origen" />
@@ -47,6 +55,18 @@ export default function Filters({ filters, setFilters, portals, promoters }) {
       />
       <DatePicker date={filters.startDate} setDate={(date) => handleFilterChange('startDate', date)} placeholder="Fecha de Inicio" />
       <DatePicker date={filters.endDate} setDate={(date) => handleFilterChange('endDate', date)} placeholder="Fecha de Fin" />
+      
+      <Select onValueChange={(value) => handleFilterChange('property_type', value)} defaultValue={filters.property_type || 'all'}>
+        <SelectTrigger>
+          <SelectValue placeholder="Tipo de Propiedad" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Todos los Tipos</SelectItem>
+          {propertyTypes.map(type => (
+            <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }

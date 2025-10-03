@@ -15,6 +15,7 @@ export default function DashboardPage() {
   const [filters, setFilters] = useState({
     portal: 'all',
     promoter: 'all',
+    property_type: 'all',
     minPrice: '',
     maxPrice: '',
     startDate: null,
@@ -66,6 +67,10 @@ export default function DashboardPage() {
       const endDate = new Date(filters.endDate);
       endDate.setHours(23, 59, 59, 999); // Include the whole day
       result = result.filter(p => new Date(p.created_at) <= endDate);
+    }
+
+    if (filters.property_type !== 'all') {
+      result = result.filter(p => p.property_type === filters.property_type);
     }
 
     setFilteredProperties(result);

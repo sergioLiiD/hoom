@@ -7,10 +7,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import PropertyDetails from '@/components/PropertyDetails';
+import { Home } from 'lucide-react';
 import logo from '@/assets/logo-hoom.png';
 
 const AnalysisPage = () => {
-  const [filters, setFilters] = useState({});
+  const [filters, setFilters] = useState({ property_type: 'casa' }); // Forzar tipo casa
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [medianPricePerSqm, setMedianPricePerSqm] = useState(0);
@@ -18,18 +19,19 @@ const AnalysisPage = () => {
   const [viewingProperty, setViewingProperty] = useState(null);
 
   const parsePrompt = (prompt) => {
-    const newFilters = {};
     const cleanPrompt = prompt.toLowerCase().replace(/,/g, '');
+    const newFilters = { property_type: 'casa' }; // Siempre mantener tipo casa
 
     const patterns = {
       minPrice: /(?:mas de|minimo|desde) \$?(\d+)/i,
       maxPrice: /(?:menos de|maximo|hasta) \$?(\d+)/i,
-      minBeds: /(?:(?:mas de|minimo|desde) )?(?:(\d+)|un|una) (?:habitaciones|cuartos|recamaras)/i,
-      minBaths: /(?:(?:mas de|minimo|desde) )?(?:(\d+)|un|una) (?:baños|banos)/i,
+      minBeds: /(?:(?:mas de|minimo|desde) )?(\d+|un|una) (?:habitaciones|cuartos|recamaras)/i,
+      minBaths: /(?:(?:mas de|minimo|desde) )?(\d+|un|una) (?:baños|banos)/i,
       minConstruction: /(?:(?:mas de|minimo|desde) )?(\d+) m2(?: de construcción)?/i,
       minLand: /(?:(?:mas de|minimo|desde) )?(\d+) m2 de terreno/i,
       exactLevels: /(\d+) niveles?/i,
       isNew: /nuevas?/i,
+      propertyType: /(casas?|terrenos?|departamentos?|oficinas?|local(?:es)? comercial(?:es)?|bodegas?)(\s|$)/i,
     };
 
     const getNumber = (match) => {
@@ -65,6 +67,8 @@ const AnalysisPage = () => {
     const isNewMatch = cleanPrompt.match(patterns.isNew);
     if (isNewMatch) newFilters.isNew = true;
 
+    // Ignoramos el tipo de propiedad en el prompt, siempre será casa
+
     return newFilters;
   };
 
@@ -76,7 +80,9 @@ const AnalysisPage = () => {
   useEffect(() => {
     const handleFilter = async () => {
       setLoading(true);
-      let query = supabase.from('properties').select('*, promoter_id(*), fraccionamientos (nombre)');
+      let query = supabase.from('properties')
+        .select('*, promoter_id(*), fraccionamientos (nombre)')
+        .eq('property_type', 'casa'); // Siempre filtrar por casas
 
       if (filters.minPrice) query = query.gte('price', filters.minPrice);
       if (filters.maxPrice) query = query.lte('price', filters.maxPrice);
@@ -87,6 +93,7 @@ const AnalysisPage = () => {
       if (filters.exactLevels) query = query.eq('levels', filters.exactLevels);
       if (filters.isNew) query = query.eq('is_new_property', true);
       if (filters.fraccionamiento_id) query = query.eq('fraccionamiento_id', filters.fraccionamiento_id);
+      // Ya estamos filtrando por casa
 
       const { data, error } = await query;
 
@@ -103,6 +110,7 @@ const AnalysisPage = () => {
             const median = sortedPrices.length % 2 !== 0 ? sortedPrices[mid] : (sortedPrices[mid - 1] + sortedPrices[mid]) / 2;
             setMedianPrice(median);
 
+            // Calcular precio por m² usando construction_area_m2 para casas
             const propertiesWithSqm = pricedProperties.filter(p => p.construction_area_m2 > 0);
             if (propertiesWithSqm.length > 0) {
               const pricesPerSqm = propertiesWithSqm.map(p => p.price / p.construction_area_m2).sort((a, b) => a - b);
@@ -130,10 +138,18 @@ const AnalysisPage = () => {
     <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-6">
         <img src={logo} alt="Hoom Properties Logo" className="h-12" />
-        <h1 className="text-2xl font-bold text-primary">Análisis de Mercado</h1>
+        <div className="flex items-center gap-2">
+          <Home className="h-6 w-6 text-blue-600" />
+          <h1 className="text-2xl font-bold text-primary">Análisis de Casas</h1>
+        </div>
       </div>
       <ChatFilter onPromptSubmit={handlePromptSubmit} />
-      <PropertyFilters filters={filters} setFilters={setFilters} onFilter={() => { /* Filtering is now automatic on filter change */ }} />
+      <PropertyFilters 
+        filters={filters} 
+        setFilters={setFilters} 
+        onFilter={() => {}} 
+        hidePropertyTypeFilter={true} // Ocultar filtro de tipo de propiedad
+      />
 
       {loading ? (
         <p>Cargando...</p>

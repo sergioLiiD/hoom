@@ -7,9 +7,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from '@/lib/supabaseClient';
 
-const PropertyFilters = ({ filters, setFilters, onFilter }) => {
+const PropertyFilters = ({ filters, setFilters, onFilter, hidePropertyTypeFilter = false }) => {
   const [fraccionamientos, setFraccionamientos] = useState([]);
   const [open, setOpen] = useState(false)
   const [value, setValue] = useState("")
@@ -56,7 +57,7 @@ const PropertyFilters = ({ filters, setFilters, onFilter }) => {
 
   return (
     <div className="flex flex-col gap-4 p-4 border-b">
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         <div>
           <Label htmlFor="minPrice">Precio Mín.</Label>
           <Input id="minPrice" name="minPrice" type="number" value={filters.minPrice || ''} onChange={handleInputChange} />
@@ -142,6 +143,29 @@ const PropertyFilters = ({ filters, setFilters, onFilter }) => {
             </PopoverContent>
           </Popover>
         </div>
+        {!hidePropertyTypeFilter && (
+          <div>
+            <Label htmlFor="propertyType">Tipo de Propiedad</Label>
+            <Select
+              name="property_type"
+              value={filters.property_type || 'all'}
+              onValueChange={(value) => setFilters(prev => ({ ...prev, property_type: value === 'all' ? undefined : value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Todos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="casa">Casa</SelectItem>
+                <SelectItem value="terreno">Terreno</SelectItem>
+                <SelectItem value="departamento">Departamento</SelectItem>
+                <SelectItem value="oficina">Oficina</SelectItem>
+                <SelectItem value="local_comercial">Local Comercial</SelectItem>
+                <SelectItem value="bodega">Bodega</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
       <Button onClick={onFilter}>Filtrar Propiedades</Button>
     </div>

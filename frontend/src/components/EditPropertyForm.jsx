@@ -13,8 +13,19 @@ export default function EditPropertyForm({ property, promoters, fraccionamientos
   const [formData, setFormData] = useState({ 
     ...property, 
     latitude: property.latitude || 19.4326, 
-    longitude: property.longitude || -99.1332 
+    longitude: property.longitude || -99.1332,
+    property_type: property.property_type || 'casa'
   });
+  
+  // Definir tipos de propiedades disponibles
+  const propertyTypes = [
+    { value: 'casa', label: '🏠 Casa' },
+    { value: 'terreno', label: '🌳 Terreno' },
+    { value: 'departamento', label: '🏢 Departamento' },
+    { value: 'oficina', label: '🏢 Oficina' },
+    { value: 'local_comercial', label: '🏬 Local Comercial' },
+    { value: 'bodega', label: '🏭 Bodega' },
+  ];
 
   function LocationMarker() {
     const map = useMapEvents({
@@ -104,6 +115,23 @@ export default function EditPropertyForm({ property, promoters, fraccionamientos
   return (
     <form onSubmit={handleSubmit}>
       <div className="grid grid-cols-2 gap-4 py-4">
+        <div className="space-y-2 col-span-2">
+          <Label>Tipo de Propiedad</Label>
+          <Select
+            value={formData.property_type}
+            onValueChange={(value) => handleChange('property_type', value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Seleccionar tipo de propiedad" />
+            </SelectTrigger>
+            <SelectContent>
+              {propertyTypes.map(type => (
+                <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
         <div className="space-y-2">
           <Label htmlFor="title">Título</Label>
           <Input id="title" value={formData.title || ''} onChange={(e) => handleChange('title', e.target.value)} />
@@ -140,38 +168,49 @@ export default function EditPropertyForm({ property, promoters, fraccionamientos
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="construction_area_m2">Constr. m²</Label>
-          <Input id="construction_area_m2" type="number" value={formData.construction_area_m2 || ''} onChange={(e) => handleChange('construction_area_m2', parseInt(e.target.value))} />
-        </div>
+        {/* Área de terreno (siempre visible) */}
         <div className="space-y-2">
           <Label htmlFor="land_area_m2">Terreno m²</Label>
           <Input id="land_area_m2" type="number" value={formData.land_area_m2 || ''} onChange={(e) => handleChange('land_area_m2', parseInt(e.target.value))} />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="bedrooms">Recámaras</Label>
-          <Input id="bedrooms" type="number" value={formData.bedrooms || ''} onChange={(e) => handleChange('bedrooms', parseInt(e.target.value))} />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="full_bathrooms">Baños</Label>
-          <Input id="full_bathrooms" type="number" value={formData.full_bathrooms || ''} onChange={(e) => handleChange('full_bathrooms', parseInt(e.target.value))} />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="half_bathrooms">1/2 Baños</Label>
-          <Input id="half_bathrooms" type="number" value={formData.half_bathrooms || ''} onChange={(e) => handleChange('half_bathrooms', parseInt(e.target.value))} />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="parking_spaces">Estac.</Label>
-          <Input id="parking_spaces" type="number" value={formData.parking_spaces || ''} onChange={(e) => handleChange('parking_spaces', parseInt(e.target.value))} />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="levels">Niveles</Label>
-          <Input id="levels" type="number" value={formData.levels || ''} onChange={(e) => handleChange('levels', parseInt(e.target.value))} />
-        </div>
-        <div className="flex items-center space-x-2">
-          <Switch id="is_new_property" checked={formData.is_new_property} onCheckedChange={(checked) => handleChange('is_new_property', checked)} />
-          <Label htmlFor="is_new_property">¿Vivienda Nueva?</Label>
-        </div>
+
+        {/* Campos para propiedades con construcción (todo excepto terrenos) */}
+        {formData.property_type !== 'terreno' && (
+          <div className="space-y-2">
+            <Label htmlFor="construction_area_m2">Constr. m²</Label>
+            <Input id="construction_area_m2" type="number" value={formData.construction_area_m2 || ''} onChange={(e) => handleChange('construction_area_m2', parseInt(e.target.value))} />
+          </div>
+        )}
+        
+        {/* Campos para propiedades residenciales (casa o departamento) */}
+        {(formData.property_type === 'casa' || formData.property_type === 'departamento') && (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="bedrooms">Recámaras</Label>
+              <Input id="bedrooms" type="number" value={formData.bedrooms || ''} onChange={(e) => handleChange('bedrooms', parseInt(e.target.value))} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="full_bathrooms">Baños</Label>
+              <Input id="full_bathrooms" type="number" value={formData.full_bathrooms || ''} onChange={(e) => handleChange('full_bathrooms', parseInt(e.target.value))} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="half_bathrooms">1/2 Baños</Label>
+              <Input id="half_bathrooms" type="number" value={formData.half_bathrooms || ''} onChange={(e) => handleChange('half_bathrooms', parseInt(e.target.value))} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="parking_spaces">Estac.</Label>
+              <Input id="parking_spaces" type="number" value={formData.parking_spaces || ''} onChange={(e) => handleChange('parking_spaces', parseInt(e.target.value))} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="levels">Niveles</Label>
+              <Input id="levels" type="number" value={formData.levels || ''} onChange={(e) => handleChange('levels', parseInt(e.target.value))} />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch id="is_new_property" checked={formData.is_new_property} onCheckedChange={(checked) => handleChange('is_new_property', checked)} />
+              <Label htmlFor="is_new_property">¿Vivienda Nueva?</Label>
+            </div>
+          </>
+        )}
         <div className="space-y-2">
           <Label htmlFor="days_on_market">Días en el Mercado</Label>
           <Input id="days_on_market" type="number" value={daysOnMarket} onChange={(e) => handleDaysChange(e.target.value)} />

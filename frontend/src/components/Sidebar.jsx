@@ -1,4 +1,4 @@
-import { Home, Users, Map, LineChart } from "lucide-react";
+import { Home, Users, Map, LineChart, Trees } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -29,7 +29,8 @@ export default function Sidebar() {
           <NavItem to="/" icon={<Home className="h-5 w-5" />} label="Dashboard" />
           <NavItem to="/promoters" icon={<Users className="h-5 w-5" />} label="Promotores" />
           <NavItem to="/map" icon={<Map className="h-5 w-5" />} label="Mapa" />
-          <NavItem to="/analysis" icon={<LineChart className="h-5 w-5" />} label="Análisis" />
+          <NavItem to="/analysis" icon={<Home className="h-5 w-5 text-blue-600" />} label="Análisis de Casas" />
+          <NavItem to="/land-analysis" icon={<Trees className="h-5 w-5 text-green-600" />} label="Análisis de Terrenos" />
         </nav>
       </aside>
     </TooltipProvider>
