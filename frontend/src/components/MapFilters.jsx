@@ -25,6 +25,11 @@ const MapFilters = ({ filters, onFilterChange, onApplyFilters }) => {
     { value: 'local_comercial', label: '🏬 Local Comercial' },
     { value: 'bodega', label: '🏭 Bodega' },
   ];
+  
+  const listingTypes = [
+    { value: 'venta', label: '💰 En Venta' },
+    { value: 'renta', label: '📝 En Renta' },
+  ];
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -44,26 +49,52 @@ const MapFilters = ({ filters, onFilterChange, onApplyFilters }) => {
     setLocalFilters(prev => ({ ...prev, property_type: newValue }));
   };
   
+  const handleListingTypeChange = (value) => {
+    console.log(`Listing type changed to: ${value}`);
+    const newValue = value === 'all' ? undefined : value;
+    console.log(`Setting listing_type to: ${newValue}`);
+    
+    setLocalFilters(prev => ({ ...prev, listing_type: newValue }));
+  };
+  
   const applyLocalFilters = () => {
     console.log('Applying local filters:', localFilters);
     onFilterChange(localFilters);
     onApplyFilters();
   };
 
+  const [isMobile, setIsMobile] = useState(false);
+  
+  useEffect(() => {
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkIfMobile();
+    window.addEventListener('resize', checkIfMobile);
+    
+    return () => window.removeEventListener('resize', checkIfMobile);
+  }, []);
+
   return (
-    <Card className="absolute top-4 left-4 z-[1000] w-80 bg-white/90 backdrop-blur-sm">
-      <CardHeader className="flex items-center justify-between py-3">
-        <div className="flex items-center gap-3">
-          <img src={logo} alt="Hoom Logo" className="h-8" />
-          <Button variant="ghost" size="icon" onClick={() => setIsOpen(!isOpen)}>
-            {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-          </Button>
+    <Card className={`absolute ${isMobile ? 'top-16 left-2 right-2' : 'top-4 left-4 w-80'} z-[1000] bg-white/90 backdrop-blur-sm`}>
+      <CardHeader className="flex flex-row items-center justify-between py-3 px-4">
+        <div className="flex items-center gap-2">
+          {!isMobile && <img src={logo} alt="Hoom Logo" className="h-6" />}
+          <CardTitle className={isMobile ? 'text-base' : 'text-lg'}>Filtros</CardTitle>
         </div>
-        <CardTitle className="text-lg">Filtros</CardTitle>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={() => setIsOpen(!isOpen)}
+          className="h-8 w-8"
+        >
+          {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </Button>
       </CardHeader>
       {isOpen && (
-        <CardContent className="space-y-4 pt-0">
-        <div className="grid grid-cols-2 gap-4">
+        <CardContent className="space-y-3 pt-0 px-3 pb-4">
+        <div className="grid grid-cols-2 gap-3">
           <div>
             <Label htmlFor="minPrice">Precio Mín.</Label>
             <Input id="minPrice" name="minPrice" type="number" value={localFilters.minPrice || ''} onChange={handleInputChange} placeholder="$1M" />
@@ -89,7 +120,7 @@ const MapFilters = ({ filters, onFilterChange, onApplyFilters }) => {
             <Input id="maxLand" name="maxLand" type="number" value={localFilters.maxLand || ''} onChange={handleInputChange} placeholder="1000" />
           </div>
         </div>
-        <div className="space-y-4 pt-2">
+        <div className="space-y-3 pt-1">
           <div>
             <Label htmlFor="propertyType">Tipo de Propiedad</Label>
             <select
@@ -106,16 +137,32 @@ const MapFilters = ({ filters, onFilterChange, onApplyFilters }) => {
             </select>
           </div>
           
+          <div>
+            <Label htmlFor="listingType">Tipo de Listado</Label>
+            <select
+              name="listingType"
+              id="listingType"
+              className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              value={localFilters.listing_type || 'all'}
+              onChange={(e) => handleListingTypeChange(e.target.value)}
+            >
+              <option value="all">Todos los listados</option>
+              {listingTypes.map(type => (
+                <option key={type.value} value={type.value}>{type.label}</option>
+              ))}
+            </select>
+          </div>
           <div className="flex items-center space-x-2">
             <Switch id="isNew" checked={localFilters.isNew || false} onCheckedChange={handleSwitchChange} />
-            <Label htmlFor="isNew">Solo Propiedades Nuevas</Label>
+            <Label htmlFor="isNew" className={isMobile ? 'hidden' : ''}>Solo Propiedades Nuevas</Label>
           </div>
         </div>
-        <Button onClick={applyLocalFilters} className="w-full">Aplicar Filtros</Button>
+          <Button onClick={applyLocalFilters} className="w-full mt-2">
+            {isMobile ? 'Aplicar' : 'Aplicar Filtros'}
+          </Button>
         </CardContent>
       )} 
     </Card>
   );
 };
-
 export default MapFilters;

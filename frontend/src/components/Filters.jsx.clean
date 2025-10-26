@@ -8,8 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ScrollArea } from "./ui/scroll-area";
 
 const FilterGroup = ({ title, children, className = "" }) => (
-  <div className={`space-y-1 ${className}`}>
-    <h3 className="text-xs font-medium text-muted-foreground">{title}</h3>
+  <div className={`space-y-2 ${className}`}>
+    <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
     {children}
   </div>
 );
@@ -17,7 +17,6 @@ const FilterGroup = ({ title, children, className = "" }) => (
 export default function Filters({ filters, setFilters, portals = [], promoters = [] }) {
   const [isMobile, setIsMobile] = useState(false);
   const [open, setOpen] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
   
   useEffect(() => {
     const checkIfMobile = () => {
@@ -65,9 +64,9 @@ export default function Filters({ filters, setFilters, portals = [], promoters =
   };
 
   const renderFilterContent = () => (
-    <div className="space-y-3 p-1">
+    <div className="space-y-6 p-1">
       <FilterGroup title="Rango de Precios">
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-3">
           <Input
             type="number"
             placeholder="Mínimo"
@@ -84,7 +83,7 @@ export default function Filters({ filters, setFilters, portals = [], promoters =
       </FilterGroup>
 
       <FilterGroup title="Fechas">
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-3">
           <DatePicker 
             date={filters.startDate} 
             setDate={(date) => handleFilterChange('startDate', date)} 
@@ -199,24 +198,15 @@ export default function Filters({ filters, setFilters, portals = [], promoters =
 
   // Vista de escritorio
   return (
-    <div className="border rounded-lg bg-card overflow-hidden text-sm">
-      <div className="p-2 border-b flex justify-between items-center">
-        <h3 className="font-medium flex items-center gap-1 text-sm">
-          <Filter className="h-3 w-3" /> Filtros
+    <div className="border rounded-lg bg-card overflow-hidden">
+      <div className="p-4 border-b">
+        <h3 className="font-medium flex items-center gap-2">
+          <Filter className="h-4 w-4" /> Filtros
         </h3>
-        <button 
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-          aria-label={isCollapsed ? 'Mostrar filtros' : 'Ocultar filtros'}
-        >
-          {isCollapsed ? 'Mostrar ▼' : 'Ocultar ▲'}
-        </button>
       </div>
-      {!isCollapsed && (
-        <div className="p-2">
-          {renderFilterContent()}
-        </div>
-      )}
+      <div className="p-4">
+        {renderFilterContent()}
+      </div>
     </div>
   );
 }

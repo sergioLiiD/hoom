@@ -8,6 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { DialogFooter } from '@/components/ui/dialog';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import { createPropertyIcon, propertyColors } from '@/lib/mapIcons';
 
 export default function EditPropertyForm({ property, promoters, fraccionamientos, onSave, onCancel }) {
   const [formData, setFormData] = useState({ 
@@ -26,6 +28,12 @@ export default function EditPropertyForm({ property, promoters, fraccionamientos
     { value: 'local_comercial', label: '🏬 Local Comercial' },
     { value: 'bodega', label: '🏭 Bodega' },
   ];
+  
+  // Definir tipos de listado disponibles
+  const listingTypes = [
+    { value: 'venta', label: '💰 Venta' },
+    { value: 'renta', label: '📝 Renta' },
+  ];
 
   function LocationMarker() {
     const map = useMapEvents({
@@ -36,8 +44,51 @@ export default function EditPropertyForm({ property, promoters, fraccionamientos
       },
     });
 
+    // Crear ícono personalizado basado en el tipo de propiedad y listado
+    const getCustomIcon = () => {
+      const propertyType = formData.property_type || 'default';
+      const listingType = formData.listing_type || 'venta';
+      const color = propertyColors[propertyType] || propertyColors.default;
+      const isRental = listingType === 'renta';
+      
+      // Crear un ícono personalizado similar al del mapa principal
+      const icon = L.divIcon({
+        className: 'custom-div-icon',
+        html: `
+          <div style="
+            background-color: ${isRental ? 'rgba(255, 255, 255, 0.3)' : color};
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid ${isRental ? color : 'white'};
+            ${isRental ? 'border-style: dashed;' : ''}
+            box-shadow: 0 0 5px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          ">
+            <div style="
+              background-color: ${color};
+              width: 16px;
+              height: 16px;
+              border-radius: 50%;
+              border: 2px solid white;
+            "></div>
+          </div>
+        `,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12],
+        popupAnchor: [0, -12]
+      });
+      
+      return icon;
+    };
+
     return formData.latitude && formData.longitude ? (
-      <Marker position={[formData.latitude, formData.longitude]}></Marker>
+      <Marker 
+        position={[formData.latitude, formData.longitude]}
+        icon={getCustomIcon()}
+      />
     ) : null;
   }
 
@@ -53,15 +104,21 @@ export default function EditPropertyForm({ property, promoters, fraccionamientos
   const [daysOnMarket, setDaysOnMarket] = useState('');
 
   useEffect(() => {
-    if (property.publication_date) {
-        const pubDate = new Date(property.publication_date);
-        const today = new Date();
-        const diffTime = Math.abs(today - pubDate);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        setDaysOnMarket(diffDays);
+    // Si ya tenemos days_on_market guardado, usamos ese valor
+    if (property.days_on_market) {
+      setDaysOnMarket(property.days_on_market);
     }
-
-  }, [property.publication_date]);
+    // Si no tenemos days_on_market pero sí tenemos publication_date, calculamos los días
+    else if (property.publication_date) {
+      const pubDate = new Date(property.publication_date);
+      const today = new Date();
+      const diffTime = Math.abs(today - pubDate);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      setDaysOnMarket(diffDays);
+      // Actualizamos formData con el valor calculado
+      setFormData(prev => ({ ...prev, days_on_market: diffDays }));
+    }
+  }, [property.publication_date, property.days_on_market]);
 
   const handleChange = (key, value) => {
     setFormData(prev => ({ ...prev, [key]: value }));
@@ -73,6 +130,8 @@ export default function EditPropertyForm({ property, promoters, fraccionamientos
       const newPubDate = new Date();
       newPubDate.setDate(newPubDate.getDate() - parseInt(days, 10));
       handleChange('publication_date', newPubDate.toISOString().split('T')[0]);
+      // Guardar también los días en el mercado
+      handleChange('days_on_market', parseInt(days, 10));
     }
   };
 
@@ -99,23 +158,51 @@ export default function EditPropertyForm({ property, promoters, fraccionamientos
     // Remove nested objects if they exist
     delete preparedData.promoter;
     delete preparedData.fraccionamientos;
-
-    const { error } = await supabase
-      .from('properties')
-      .update(preparedData)
-      .eq('id', property.id);
-
-    if (error) {
-      console.error('Error updating property:', error);
-    } else {
-      onSave(preparedData);
+    
+    // Asegurarse de que days_on_market sea un número entero o null
+    if (preparedData.days_on_market) {
+      preparedData.days_on_market = parseInt(preparedData.days_on_market, 10) || null;
+    }
+    
+    try {
+      const { error } = await supabase
+        .from('properties')
+        .update(preparedData)
+        .eq('id', property.id);
+  
+      if (error) {
+        console.error('Error updating property:', error);
+        
+        // Si el error es por la columna days_on_market, intentamos de nuevo sin ese campo
+        if (error.message && error.message.includes('days_on_market')) {
+          console.log('Retrying without days_on_market field');
+          delete preparedData.days_on_market;
+          
+          const { error: retryError } = await supabase
+            .from('properties')
+            .update(preparedData)
+            .eq('id', property.id);
+            
+          if (retryError) {
+            console.error('Error in retry update:', retryError);
+          } else {
+            onSave(preparedData);
+            return;
+          }
+        }
+      } else {
+        onSave(preparedData);
+        return;
+      }
+    } catch (err) {
+      console.error('Exception during update:', err);
     }
   };
 
   return (
     <form onSubmit={handleSubmit}>
       <div className="grid grid-cols-2 gap-4 py-4">
-        <div className="space-y-2 col-span-2">
+        <div className="space-y-2 col-span-1">
           <Label>Tipo de Propiedad</Label>
           <Select
             value={formData.property_type}
@@ -126,6 +213,23 @@ export default function EditPropertyForm({ property, promoters, fraccionamientos
             </SelectTrigger>
             <SelectContent>
               {propertyTypes.map(type => (
+                <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="space-y-2 col-span-1">
+          <Label>Tipo de Listado</Label>
+          <Select
+            value={formData.listing_type || 'venta'}
+            onValueChange={(value) => handleChange('listing_type', value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Seleccionar tipo de listado" />
+            </SelectTrigger>
+            <SelectContent>
+              {listingTypes.map(type => (
                 <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
               ))}
             </SelectContent>

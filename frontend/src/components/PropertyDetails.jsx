@@ -2,18 +2,34 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { Card, CardContent } from "@/components/ui/card";
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { Home, Trees, Building2, Building, Store, Warehouse } from 'lucide-react';
+import { getPropertyIcon } from '@/lib/mapIcons';
 
 export default function PropertyDetails({ property }) {
   const hasCoordinates = property.latitude && property.longitude;
   const captureDate = property.created_at ? new Date(property.created_at).toLocaleDateString('es-MX') : 'N/A';
 
-  const publicationDate = property.publication_date ? new Date(property.publication_date) : null;
+  // Calcular los días en el mercado
   let daysOnMarket = 'N/A';
-  if (publicationDate) {
-    const today = new Date();
-    const diffTime = Math.abs(today - publicationDate);
-    daysOnMarket = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  let publicationDate = null;
+  
+  // Si tenemos days_on_market guardado, lo usamos
+  if (property.days_on_market) {
+    daysOnMarket = property.days_on_market;
+    if (property.created_at) {
+      publicationDate = new Date(property.created_at);
+      publicationDate.setDate(publicationDate.getDate() - property.days_on_market);
+    }
   }
+  // Si tenemos publication_date, calculamos los días
+  else if (property.publication_date) {
+    publicationDate = new Date(property.publication_date);
+    if (property.created_at) {
+      const captureDate = new Date(property.created_at);
+      const diffTime = Math.abs(captureDate - publicationDate);
+      daysOnMarket = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    }
+  }
+  
   const publicationDateFormatted = publicationDate ? publicationDate.toLocaleDateString('es-MX') : 'N/A';
 
   return (
@@ -139,9 +155,12 @@ export default function PropertyDetails({ property }) {
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
-              <Marker position={[property.latitude, property.longitude]}>
+              <Marker 
+                position={[property.latitude, property.longitude]}
+                icon={getPropertyIcon(property)}
+              >
                 <Popup>
-                  {property.title}
+                  {property.title || 'Propiedad'}
                 </Popup>
               </Marker>
             </MapContainer>

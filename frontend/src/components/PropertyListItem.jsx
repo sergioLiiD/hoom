@@ -24,14 +24,58 @@ export default function PropertyListItem({ property, onEdit, onDelete, onViewDet
             <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${property.is_new_property ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
               {property.is_new_property ? 'Nueva' : 'Usada'}
             </span>
+            <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${property.listing_type === 'venta' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'}`}>
+              {property.listing_type === 'venta' ? 'Venta' : 'Renta'}
+            </span>
           </div>
           <h3 className="font-semibold line-clamp-1">{property.title || "Sin Título"}</h3>
         </div>
-        <p className="text-sm text-muted-foreground">{property.location_text}</p>
-        <div className="text-xs text-muted-foreground mt-1">Capturado: {new Date(property.created_at).toLocaleDateString('es-MX')}</div>
-        <p className="font-bold text-primary mt-1">
+        <div className="text-sm text-muted-foreground">{property.location_text}</div>
+        <div className="text-xs text-muted-foreground mt-1">
+          Capturado: {new Date(property.created_at).toLocaleDateString('es-MX')} | 
+          Publicado: {
+            (() => {
+              // Si tenemos days_on_market, calculamos la fecha de publicación
+              if (property.created_at && property.days_on_market) {
+                const pubDate = new Date(property.created_at);
+                pubDate.setDate(pubDate.getDate() - property.days_on_market);
+                return pubDate.toLocaleDateString('es-MX');
+              }
+              // Si tenemos publication_date, la usamos directamente
+              else if (property.publication_date) {
+                return new Date(property.publication_date).toLocaleDateString('es-MX');
+              }
+              return 'N/A';
+            })()
+          } | 
+          Días en mercado: {
+            (() => {
+              // Calculamos la fecha de publicación
+              let pubDate;
+              if (property.created_at && property.days_on_market) {
+                // Si tenemos days_on_market, calculamos la fecha de publicación original
+                pubDate = new Date(property.created_at);
+                pubDate.setDate(pubDate.getDate() - property.days_on_market);
+              } else if (property.publication_date) {
+                // Si tenemos publication_date, la usamos directamente
+                pubDate = new Date(property.publication_date);
+              } else {
+                return 'N/A';
+              }
+              
+              // Calculamos los días desde la publicación hasta hoy
+              const today = new Date();
+              const diffTime = Math.abs(today - pubDate);
+              return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            })()
+          }
+        </div>
+        <div className="font-bold text-primary mt-1">
           {new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(property.price || 0)}
-        </p>
+        </div>
+        <div className="text-xs font-medium text-muted-foreground">
+          Fracc: {property.fraccionamientos?.nombre || "N/A"}
+        </div>
       </div>
       <div className="flex items-center gap-4 text-sm text-muted-foreground w-1/4">
         {property.property_type !== 'terreno' ? (

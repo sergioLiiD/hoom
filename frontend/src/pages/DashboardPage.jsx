@@ -16,14 +16,20 @@ export default function DashboardPage() {
     portal: 'all',
     promoter: 'all',
     property_type: 'all',
+    listing_type: 'all',
     minPrice: '',
     maxPrice: '',
     startDate: null,
     endDate: null,
+    sortBy: 'created_at_desc', // Ordenar por fecha de creación descendente por defecto
   });
 
   const fetchData = async () => {
-    const { data: propertiesData, error: propertiesError } = await supabase.from('properties').select('*, promoter_id(*), fraccionamientos(nombre)');
+    const { data: propertiesData, error: propertiesError } = await supabase
+      .from('properties')
+      .select('*, promoter_id(*), fraccionamientos(nombre)')
+      .order('created_at', { ascending: false }); // Ordenar por fecha de creación, más recientes primero
+    
     if (propertiesError) console.error('Error fetching properties:', propertiesError);
     else setProperties(propertiesData || []);
 
@@ -71,6 +77,43 @@ export default function DashboardPage() {
 
     if (filters.property_type !== 'all') {
       result = result.filter(p => p.property_type === filters.property_type);
+    }
+
+    if (filters.listing_type !== 'all') {
+      result = result.filter(p => p.listing_type === filters.listing_type);
+    }
+    
+    // Ordenar las propiedades según el criterio seleccionado
+    switch (filters.sortBy) {
+      case 'created_at_desc':
+        result = [...result].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        break;
+      case 'created_at_asc':
+        result = [...result].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        break;
+      case 'price_desc':
+        result = [...result].sort((a, b) => b.price - a.price);
+        break;
+      case 'price_asc':
+        result = [...result].sort((a, b) => a.price - b.price);
+        break;
+      case 'days_on_market_desc':
+        result = [...result].sort((a, b) => {
+          const daysA = a.days_on_market || 0;
+          const daysB = b.days_on_market || 0;
+          return daysB - daysA;
+        });
+        break;
+      case 'days_on_market_asc':
+        result = [...result].sort((a, b) => {
+          const daysA = a.days_on_market || 0;
+          const daysB = b.days_on_market || 0;
+          return daysA - daysB;
+        });
+        break;
+      default:
+        // Por defecto, ordenar por fecha de creación descendente
+        result = [...result].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     }
 
     setFilteredProperties(result);

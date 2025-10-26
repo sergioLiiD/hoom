@@ -52,12 +52,15 @@ export default function PropertyList({ properties, promoters, fraccionamientos, 
                     <span className={`px-2 py-1 text-xs font-semibold rounded-full ${property.is_new_property ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
                       {property.is_new_property ? 'Nueva' : 'Usada'}
                     </span>
+                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${property.listing_type === 'venta' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'}`}>
+                      {property.listing_type === 'venta' ? 'Venta' : 'Renta'}
+                    </span>
                   </div>
                 </div>
                 <CardTitle className="text-base line-clamp-2 h-12 mb-2">
                   {property.title || "Sin Título"}
                 </CardTitle>
-                <CardDescription as="div">
+                <div className="text-sm text-muted-foreground">
                   <div className="flex items-baseline">
                     <span className="font-bold text-lg text-primary">
                       {new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(property.price || 0)}
@@ -74,8 +77,11 @@ export default function PropertyList({ properties, promoters, fraccionamientos, 
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-muted-foreground">{property.location_text}</p>
-                </CardDescription>
+                  <div className="text-sm font-medium text-muted-foreground">
+                    Fracc: {property.fraccionamientos?.nombre || "N/A"}
+                  </div>
+                  <div className="text-sm text-muted-foreground">{property.location_text}</div>
+                </div>
                 <div className="mt-3">
                   {property.property_url && (
                     <a href={property.property_url} target="_blank" rel="noopener noreferrer" className="inline-block">
@@ -122,6 +128,42 @@ export default function PropertyList({ properties, promoters, fraccionamientos, 
                   <div className="text-sm text-muted-foreground space-y-1">
                     <div><span className="font-semibold">Asesor:</span> {property.promoter_id?.name || "N/A"}</div>
                     <div><span className="font-semibold">Capturado:</span> {new Date(property.created_at).toLocaleDateString('es-MX')}</div>
+                    <div><span className="font-semibold">Publicado:</span> {
+                      (() => {
+                        // Si tenemos days_on_market, calculamos la fecha de publicación
+                        if (property.created_at && property.days_on_market) {
+                          const pubDate = new Date(property.created_at);
+                          pubDate.setDate(pubDate.getDate() - property.days_on_market);
+                          return pubDate.toLocaleDateString('es-MX');
+                        }
+                        // Si tenemos publication_date, la usamos directamente
+                        else if (property.publication_date) {
+                          return new Date(property.publication_date).toLocaleDateString('es-MX');
+                        }
+                        return 'N/A';
+                      })()
+                    }</div>
+                    <div><span className="font-semibold">Días en el mercado:</span> {
+                      (() => {
+                        // Calculamos la fecha de publicación
+                        let pubDate;
+                        if (property.created_at && property.days_on_market) {
+                          // Si tenemos days_on_market, calculamos la fecha de publicación original
+                          pubDate = new Date(property.created_at);
+                          pubDate.setDate(pubDate.getDate() - property.days_on_market);
+                        } else if (property.publication_date) {
+                          // Si tenemos publication_date, la usamos directamente
+                          pubDate = new Date(property.publication_date);
+                        } else {
+                          return 'N/A';
+                        }
+                        
+                        // Calculamos los días desde la publicación hasta hoy
+                        const today = new Date();
+                        const diffTime = Math.abs(today - pubDate);
+                        return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                      })()
+                    }</div>
                   </div>
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" onClick={() => setViewingProperty(property)}>Ver Detalles</Button>

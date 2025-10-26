@@ -142,7 +142,7 @@ if df_properties.empty:
     st.warning("No se encontraron propiedades en la base de datos. ¡Empieza a capturar con la extensión!")
 else:
     st.header("Filtros")
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
 
     with col1:
         # Filtro por portal
@@ -153,15 +153,23 @@ else:
         # Filtro por promotor
         promoter_list = pd.concat([pd.DataFrame([{'name': 'Sin Promotor'}]), df_promoters[['name']]], ignore_index=True)
         selected_promoters = st.multiselect("Promotor", options=promoter_list['name'].unique(), default=promoter_list['name'].unique())
-
+    
     with col3:
-        # Filtro por rango de precio
-        min_price, max_price = st.slider(
-            "Rango de Precio (MXN)",
-            min_value=0,
-            max_value=int(df_properties['price'].max() or 0),
-            value=(0, int(df_properties['price'].max() or 0))
-        )
+        # Filtro por tipo de propiedad
+        property_types = ['Todos'] + sorted(df_properties['property_type'].dropna().unique().tolist())
+        selected_property_type = st.selectbox("Tipo de Propiedad", options=property_types, index=0)
+        
+    with col4:
+        # Filtro para excluir fraccionamientos
+        exclude_fraccionamientos = st.checkbox("Excluir Fraccionamientos", value=True)
+    
+    # Filtro por rango de precio (debajo de las otras columnas)
+    min_price, max_price = st.slider(
+        "Rango de Precio (MXN)",
+        min_value=0,
+        max_value=int(df_properties['price'].max() or 0),
+        value=(0, int(df_properties['price'].max() or 0))
+    )
 
     if st.button("🔄 Recargar Datos"):
         st.cache_data.clear()
@@ -172,7 +180,9 @@ else:
         (df_properties['source_portal'].isin(selected_portal)) &
         (df_properties['promoter_name'].isin(selected_promoters)) &
         (df_properties['price'] >= min_price) &
-        (df_properties['price'] <= max_price)
+        (df_properties['price'] <= max_price) &
+        ((selected_property_type == 'Todos') | (df_properties['property_type'] == selected_property_type)) &
+        (~df_properties['title'].str.contains('fraccionamiento', case=False, na=False) | ~exclude_fraccionamientos)
     ]
 
     st.header(f"Propiedades Encontradas: {len(filtered_df)}")

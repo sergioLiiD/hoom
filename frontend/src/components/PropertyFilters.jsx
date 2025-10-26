@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from '@/lib/supabaseClient';
 
-const PropertyFilters = ({ filters, setFilters, onFilter, hidePropertyTypeFilter = false }) => {
+const PropertyFilters = ({ filters, setFilters, onFilter, hidePropertyTypeFilter = false, hideListingTypeFilter = false }) => {
   const [fraccionamientos, setFraccionamientos] = useState([]);
   const [open, setOpen] = useState(false)
   const [value, setValue] = useState("")
@@ -106,20 +106,25 @@ const PropertyFilters = ({ filters, setFilters, onFilter, hidePropertyTypeFilter
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[200px] p-0">
+            <PopoverContent className="w-[300px] p-0">
               <Command filter={(value, search) => value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0}>
-                <CommandInput placeholder="Buscar o crear..." />
-                <CommandEmpty>
-                   <Button variant="ghost" className="w-full justify-start text-left"
-                      onClick={() => {
-                        const input = document.querySelector('[cmdk-input]');
-                        if (input) handleCreateFraccionamiento(input.value);
-                      }}>
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Crear "{document.querySelector('[cmdk-input]')?.value}"
-                    </Button>
+                <div className="px-2 pt-2">
+                  <CommandInput placeholder="Buscar fraccionamiento..." />
+                </div>
+                <CommandEmpty className="py-2 px-4 text-sm">
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start text-left"
+                    onClick={() => {
+                      const input = document.querySelector('[cmdk-input]');
+                      if (input && input.value) handleCreateFraccionamiento(input.value);
+                    }}
+                  >
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Crear "{document.querySelector('[cmdk-input]')?.value || 'nuevo'}"
+                  </Button>
                 </CommandEmpty>
-                <CommandGroup>
+                <CommandGroup className="max-h-[300px] overflow-y-auto">
                   {fraccionamientos.map((f) => (
                     <CommandItem
                       key={f.id}
@@ -128,14 +133,15 @@ const PropertyFilters = ({ filters, setFilters, onFilter, hidePropertyTypeFilter
                         setValue(currentValue === value ? "" : currentValue)
                         setOpen(false)
                       }}
+                      className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
                     >
                       <Check
                         className={cn(
-                          "mr-2 h-4 w-4",
+                          "mr-2 h-4 w-4 flex-shrink-0",
                           value === f.nombre.toLowerCase() ? "opacity-100" : "opacity-0"
                         )}
                       />
-                      {f.nombre}
+                      <span className="truncate">{f.nombre}</span>
                     </CommandItem>
                   ))}
                 </CommandGroup>
@@ -162,6 +168,25 @@ const PropertyFilters = ({ filters, setFilters, onFilter, hidePropertyTypeFilter
                 <SelectItem value="oficina">Oficina</SelectItem>
                 <SelectItem value="local_comercial">Local Comercial</SelectItem>
                 <SelectItem value="bodega">Bodega</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+        {!hideListingTypeFilter && (
+          <div>
+            <Label htmlFor="listingType">Tipo de Listado</Label>
+            <Select
+              name="listing_type"
+              value={filters.listing_type || 'all'}
+              onValueChange={(value) => setFilters(prev => ({ ...prev, listing_type: value === 'all' ? undefined : value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Todos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="venta">Venta</SelectItem>
+                <SelectItem value="renta">Renta</SelectItem>
               </SelectContent>
             </Select>
           </div>

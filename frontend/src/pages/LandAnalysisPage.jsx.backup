@@ -7,15 +7,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import PropertyDetails from '@/components/PropertyDetails';
-import { Trees } from 'lucide-react';
+import { Building2 } from 'lucide-react';
 import logo from '@/assets/logo-hoom.png';
 import CollapsibleFilters from '@/components/CollapsibleFilters';
 
-const LandAnalysisPage = () => {
-  const [filters, setFilters] = useState({ 
-    listing_type: 'venta',
-    property_type: 'terreno' 
-  }); // Forzar tipo terreno en venta
+const RentalAnalysisPage = () => {
+  const [filters, setFilters] = useState({ listing_type: 'renta' }); // Forzar tipo renta
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [medianPricePerMonth, setMedianPricePerMonth] = useState(0);
@@ -26,10 +23,7 @@ const LandAnalysisPage = () => {
 
   const parsePrompt = (prompt) => {
     const cleanPrompt = prompt.toLowerCase().replace(/,/g, '');
-    const newFilters = { 
-      listing_type: 'venta',
-      property_type: 'terreno' 
-    }; // Siempre mantener tipo terreno en venta
+    const newFilters = { listing_type: 'renta' }; // Siempre mantener tipo renta
 
     const patterns = {
       minPrice: /(?:mas de|minimo|desde) \$?(\d+)/i,
@@ -106,8 +100,7 @@ const LandAnalysisPage = () => {
       setLoading(true);
       let query = supabase.from('properties')
         .select('*, promoter_id(*), fraccionamientos (nombre)')
-        .eq('listing_type', 'venta')
-        .eq('property_type', 'terreno'); // Siempre filtrar por terrenos en venta
+        .eq('listing_type', 'renta'); // Siempre filtrar por renta
 
       if (filters.property_type) query = query.eq('property_type', filters.property_type);
       if (filters.minPrice) query = query.gte('price', filters.minPrice);
@@ -229,8 +222,8 @@ const LandAnalysisPage = () => {
       <div className="w-full space-y-6">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <Trees className="h-6 w-6 text-green-600" />
-            <h1 className="text-2xl font-bold text-primary">Terrenos en Venta</h1>
+            <Building2 className="h-6 w-6 text-purple-600" />
+            <h1 className="text-2xl font-bold text-primary">Propiedades en Renta</h1>
           </div>
           <img src={logo} alt="Hoom Properties Logo" className="h-12" />
         </div>
@@ -302,14 +295,10 @@ const LandAnalysisPage = () => {
                           <TableCell className="p-2">{index + 1}</TableCell>
                           <TableCell className="p-2">
                             <img 
-                              src={prop.photo_url || prop.photo || prop.photos?.[0] || 'https://via.placeholder.com/100x100.png?text=Sin+Foto'} 
+                              src={prop.photos?.[0] || 'https://via.placeholder.com/100x100.png?text=Sin+Foto'} 
                               alt={prop.title} 
                               className="h-10 w-10 object-cover rounded-md" 
-                              referrerPolicy="no-referrer"
-                              onError={(e) => {
-                                e.target.onerror = null;
-                                e.target.src = 'https://via.placeholder.com/100x100.png?text=Sin+Foto';
-                              }}
+                              referrerPolicy="no-referrer" 
                             />
                           </TableCell>
                           <TableCell className="p-2">{prop.title}</TableCell>
@@ -377,4 +366,4 @@ const LandAnalysisPage = () => {
   );
 };
 
-export default LandAnalysisPage;
+export default RentalAnalysisPage;

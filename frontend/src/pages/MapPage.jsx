@@ -1,35 +1,15 @@
 import { useEffect, useState, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
 import { Home, Trees, Building2, Building, Store, Warehouse } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import MapFilters from '@/components/MapFilters';
 import PropertyCard from '@/components/PropertyCard';
 import PropertyDetails from '@/components/PropertyDetails';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { propertyColors, propertyIcons, getPropertyIcon } from '@/lib/mapIcons';
 
-// Crear iconos personalizados para cada tipo de propiedad
-const createPropertyIcon = (color) => {
-  return L.divIcon({
-    className: 'custom-div-icon',
-    html: `<div style="background-color: ${color}; width: 16px; height: 16px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.5);"></div>`,
-    iconSize: [16, 16],
-    iconAnchor: [8, 8],
-    popupAnchor: [0, -8]
-  });
-};
-
-// Definir iconos para cada tipo de propiedad
-const propertyIcons = {
-  casa: createPropertyIcon('#3b82f6'), // Azul
-  terreno: createPropertyIcon('#22c55e'), // Verde
-  departamento: createPropertyIcon('#a855f7'), // Morado
-  oficina: createPropertyIcon('#64748b'), // Gris
-  local_comercial: createPropertyIcon('#f59e0b'), // Ámbar
-  bodega: createPropertyIcon('#f97316'), // Naranja
-  default: createPropertyIcon('#ef4444') // Rojo para tipos desconocidos
-};
+// Nota: Los iconos personalizados para el mapa ahora se importan desde '@/lib/mapIcons'
 
 const MapPage = () => {
   const [allProperties, setAllProperties] = useState([]);
@@ -87,6 +67,22 @@ const MapPage = () => {
       });
       
       console.log(`After filtering by type '${filters.property_type}': ${filtered.length} properties remain`);
+    }
+    
+    // Filtrar por tipo de listado (venta/renta)
+    if (filters.listing_type) {
+      console.log(`Filtering by listing_type: ${filters.listing_type}`);
+      
+      filtered = filtered.filter(p => {
+        // Si la propiedad no tiene tipo de listado, asumir que es venta (valor por defecto)
+        if (!p.listing_type) {
+          return filters.listing_type === 'venta';
+        }
+        
+        return p.listing_type === filters.listing_type;
+      });
+      
+      console.log(`After filtering by listing_type '${filters.listing_type}': ${filtered.length} properties remain`);
     }
 
     console.log(`Filtered from ${allProperties.length} to ${filtered.length} properties`);
@@ -165,12 +161,18 @@ const MapPage = () => {
 
   // Definir la leyenda del mapa
   const mapLegend = [
-    { type: 'casa', label: 'Casas', color: '#3b82f6', icon: <Home className="h-4 w-4 text-blue-600" /> },
-    { type: 'terreno', label: 'Terrenos', color: '#22c55e', icon: <Trees className="h-4 w-4 text-green-600" /> },
-    { type: 'departamento', label: 'Departamentos', color: '#a855f7', icon: <Building2 className="h-4 w-4 text-purple-600" /> },
-    { type: 'oficina', label: 'Oficinas', color: '#64748b', icon: <Building className="h-4 w-4 text-gray-600" /> },
-    { type: 'local_comercial', label: 'Locales Comerciales', color: '#f59e0b', icon: <Store className="h-4 w-4 text-amber-600" /> },
-    { type: 'bodega', label: 'Bodegas', color: '#f97316', icon: <Warehouse className="h-4 w-4 text-orange-600" /> },
+    { type: 'casa', label: 'Casas', color: propertyColors.casa, icon: <Home className="h-4 w-4 text-blue-600" /> },
+    { type: 'terreno', label: 'Terrenos', color: propertyColors.terreno, icon: <Trees className="h-4 w-4 text-green-600" /> },
+    { type: 'departamento', label: 'Departamentos', color: propertyColors.departamento, icon: <Building2 className="h-4 w-4 text-purple-600" /> },
+    { type: 'oficina', label: 'Oficinas', color: propertyColors.oficina, icon: <Building className="h-4 w-4 text-gray-600" /> },
+    { type: 'local_comercial', label: 'Locales Comerciales', color: propertyColors.local_comercial, icon: <Store className="h-4 w-4 text-amber-600" /> },
+    { type: 'bodega', label: 'Bodegas', color: propertyColors.bodega, icon: <Warehouse className="h-4 w-4 text-orange-600" /> },
+  ];
+  
+  // Definir la leyenda para tipos de listado
+  const listingTypeLegend = [
+    { type: 'venta', label: 'En Venta', borderStyle: '2px solid white' },
+    { type: 'renta', label: 'En Renta', borderStyle: '2px dashed white' },
   ];
 
   return (
@@ -190,6 +192,20 @@ const MapPage = () => {
           {mapLegend.map(item => (
             <div key={item.type} className="flex items-center gap-2 text-xs">
               <div style={{ backgroundColor: item.color }} className="w-3 h-3 rounded-full border border-white shadow-sm"></div>
+              <span>{item.label}</span>
+            </div>
+          ))}
+        </div>
+        
+        <h3 className="text-sm font-semibold mt-3 mb-2">Tipos de Listado</h3>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+          {listingTypeLegend.map(item => (
+            <div key={item.type} className="flex items-center gap-2 text-xs">
+              <div className="w-3 h-3 rounded-full" style={{ 
+                backgroundColor: propertyColors.casa, 
+                border: item.borderStyle,
+                boxShadow: '0 0 2px rgba(0,0,0,0.3)'
+              }}></div>
               <span>{item.label}</span>
             </div>
           ))}
@@ -215,19 +231,21 @@ const MapPage = () => {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        {filteredProperties.map(property => (
-          property.latitude && property.longitude && (
+        {filteredProperties.map(property => {
+          if (!property.latitude || !property.longitude) return null;
+          
+          return (
             <Marker 
               key={property.id} 
               position={[property.latitude, property.longitude]}
-              icon={propertyIcons[property.property_type] || propertyIcons.default}
+              icon={getPropertyIcon(property)}
             >
               <Popup closeButton={false}>
                 <PropertyCard property={property} onDetailsClick={setViewingProperty} />
               </Popup>
             </Marker>
-          )
-        ))}
+          );
+        })}
       </MapContainer>
       <Dialog open={!!viewingProperty} onOpenChange={() => setViewingProperty(null)}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto z-[9999]">

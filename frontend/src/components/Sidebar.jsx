@@ -1,4 +1,4 @@
-import { Home, Users, Map, LineChart, Trees } from "lucide-react";
+import { Home, Users, Map, LineChart, Trees, Building2, LayoutGrid } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -29,8 +29,10 @@ export default function Sidebar() {
           <NavItem to="/" icon={<Home className="h-5 w-5" />} label="Dashboard" />
           <NavItem to="/promoters" icon={<Users className="h-5 w-5" />} label="Promotores" />
           <NavItem to="/map" icon={<Map className="h-5 w-5" />} label="Mapa" />
-          <NavItem to="/analysis" icon={<Home className="h-5 w-5 text-blue-600" />} label="Análisis de Casas" />
-          <NavItem to="/land-analysis" icon={<Trees className="h-5 w-5 text-green-600" />} label="Análisis de Terrenos" />
+          <NavItem to="/analysis" icon={<Home className="h-5 w-5 text-blue-600" />} label="Casas en Venta" />
+          <NavItem to="/land-analysis" icon={<Trees className="h-5 w-5 text-green-600" />} label="Terrenos en Venta" />
+          <NavItem to="/rental-analysis" icon={<Building2 className="h-5 w-5 text-purple-600" />} label="Propiedades en Renta" />
+          <NavItem to="/fraccionamientos" icon={<LayoutGrid className="h-5 w-5 text-amber-600" />} label="Fraccionamientos" />
         </nav>
       </aside>
     </TooltipProvider>
