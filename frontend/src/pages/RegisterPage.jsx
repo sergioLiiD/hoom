@@ -32,7 +32,7 @@ export default function RegisterPage() {
 
       try {
         const { data, error } = await supabase.rpc('verify_invitation', {
-          invitation_code: invitationCode
+          code: invitationCode
         });
 
         if (error) throw error;
@@ -82,7 +82,7 @@ export default function RegisterPage() {
       if (authData.user) {
         // Marcar la invitación como utilizada
         const { data: useInvData, error: useInvError } = await supabase.rpc('use_invitation', {
-          invitation_code: invitationCode,
+          code: invitationCode,
           user_id: authData.user.id
         });
 

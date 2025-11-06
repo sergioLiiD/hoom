@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, Settings, LogOut } from 'lucide-react';
 import { Button } from './ui/button';
-import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabaseClient';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -11,14 +11,47 @@ const navItems = [
   { name: 'Terrenos', path: '/land-analysis' },
   { name: 'Renta', path: '/rental-analysis' },
   { name: 'Mapa', path: '/map' },
-  { name: 'Configuración', path: '/config' },
 ];
 
 export default function MobileNav() {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
-  const { signOut, isOwner, isAdmin } = useAuth();
+  const [isOwner, setIsOwner] = useState(false);
+  
+  // Verificar si el usuario es owner
+  useEffect(() => {
+    const checkUserRole = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) return;
+        
+        // Obtener el perfil del usuario
+        const { data: profileData } = await supabase
+          .from('user_profiles')
+          .select('role_id')
+          .eq('id', user.id)
+          .single();
+          
+        if (profileData && profileData.role_id) {
+          // Obtener el nombre del rol
+          const { data: roleData } = await supabase
+            .from('user_roles')
+            .select('name')
+            .eq('id', profileData.role_id)
+            .single();
+            
+          // Verificar si el usuario es owner
+          setIsOwner(roleData?.name === 'owner');
+        }
+      } catch (error) {
+        console.error('Error al verificar rol:', error);
+      }
+    };
+    
+    checkUserRole();
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -72,12 +105,33 @@ export default function MobileNav() {
             </Link>
           ))}
           
+          {/* Mostrar el enlace de configuración solo para los usuarios con rol de owner */}
+          {isOwner && (
+            <Link
+              to="/config"
+              className={cn(
+                "text-xl font-medium px-4 py-3 rounded-lg transition-colors",
+                location.pathname === "/config" 
+                  ? "bg-primary text-white" 
+                  : "text-gray-700 hover:bg-gray-100"
+              )}
+            >
+              Configuración
+            </Link>
+          )}
+          
           <div className="flex-1 min-h-[40px]" />
           
           <Button
             variant="outline"
             className="flex items-center justify-center gap-2 text-red-600 hover:bg-red-50 border-red-200"
-            onClick={signOut}
+            onClick={() => {
+              if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+                supabase.auth.signOut().then(() => {
+                  window.location.href = '/login';
+                });
+              }
+            }}
           >
             <LogOut className="h-5 w-5" />
             Cerrar sesión

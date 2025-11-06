@@ -22,14 +22,41 @@ export default function LoginPage() {
     setError(null);
 
     try {
+      console.log('Intentando iniciar sesión con:', { email });
+      console.log('Llamando a supabase.auth.signInWithPassword');
+      
+      // Limpiar el almacenamiento local antes de intentar iniciar sesión
+      // Esto puede ayudar si hay tokens obsoletos o corruptos
+      localStorage.removeItem('supabase.auth.token');
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
+      
+      console.log('Respuesta de signInWithPassword:', { 
+        success: !error,
+        hasData: !!data,
+        errorMessage: error?.message,
+        errorCode: error?.code,
+        errorStatus: error?.status
+      });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Detalles del error de autenticación:', {
+          message: error.message,
+          name: error.name,
+          code: error.code,
+          status: error.status,
+          stack: error.stack
+        });
+        throw error;
+      }
 
+      console.log('Login exitoso, usuario:', data.user.id);
+      
       // Verificar si el usuario tiene un perfil
+      console.log('Verificando perfil de usuario');
       const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
         .select('role_id')
@@ -43,16 +70,32 @@ export default function LoginPage() {
 
       // Si no tiene perfil, crear uno con rol de usuario por defecto
       if (!profileData) {
-        await supabase.from('user_profiles').insert({
+        console.log('Creando perfil para usuario:', data.user.id);
+        const { error: insertError } = await supabase.from('user_profiles').insert({
           id: data.user.id,
           role_id: 3, // rol de usuario por defecto
         });
+        
+        if (insertError) {
+          console.error('Error al crear perfil:', insertError);
+        } else {
+          console.log('Perfil creado exitosamente');
+        }
+      } else {
+        console.log('Perfil existente encontrado:', profileData);
       }
 
+      // Verificar la sesión antes de redirigir
+      const { data: sessionData } = await supabase.auth.getSession();
+      console.log('Sesión actual después de login:', sessionData);
+
       // Redirigir a la página principal
+      console.log('Redirigiendo a la página principal');
       navigate('/');
     } catch (error) {
       console.error('Error de login:', error);
+      console.error('Tipo de error:', typeof error);
+      console.error('Propiedades del error:', Object.keys(error));
       setError(error.message || 'Error al iniciar sesión');
     } finally {
       setLoading(false);
@@ -83,7 +126,17 @@ export default function LoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Contraseña</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Contraseña</Label>
+                <Button 
+                  variant="link" 
+                  className="p-0 h-auto text-xs text-blue-600" 
+                  type="button"
+                  onClick={() => navigate('/reset-password')}
+                >
+                  ¿Olvidaste tu contraseña?
+                </Button>
+              </div>
               <Input
                 id="password"
                 type="password"

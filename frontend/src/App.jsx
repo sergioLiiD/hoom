@@ -10,8 +10,13 @@ import RentalAnalysisPage from "@/pages/RentalAnalysisPage";
 import FraccionamientosPage from "@/pages/FraccionamientosPage";
 import LoginPage from "@/pages/LoginPage";
 import RegisterPage from "@/pages/RegisterPage";
+import TestSupabase from "@/pages/TestSupabase";
+import ForceLogoutPage from "@/pages/ForceLogoutPage";
 import ConfigPage from "@/pages/ConfigPage";
 import FixRolePage from "@/pages/FixRolePage";
+import LogoutPage from "@/pages/LogoutPage";
+import ResetPasswordPage from "@/pages/ResetPasswordPage";
+import UpdatePasswordPage from "@/pages/UpdatePasswordPage";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { AuthProvider } from "@/contexts/AuthContext";
 
@@ -23,7 +28,12 @@ function App() {
           {/* Rutas públicas */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/test-supabase" element={<TestSupabase />} />
+          <Route path="/force-logout" element={<ForceLogoutPage />} />
           <Route path="/fix-role" element={<FixRolePage />} />
+          <Route path="/logout" element={<LogoutPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/update-password" element={<UpdatePasswordPage />} />
           
           {/* Rutas protegidas */}
           <Route path="/" element={

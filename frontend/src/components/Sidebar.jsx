@@ -1,7 +1,8 @@
+import { useState, useEffect } from "react";
 import { Home, Users, Map, LineChart, Trees, Building2, LayoutGrid, Settings, LogOut } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabaseClient";
 
 const NavItem = ({ to, icon, label }) => (
   <Tooltip>
@@ -23,9 +24,42 @@ const NavItem = ({ to, icon, label }) => (
 );
 
 export default function Sidebar() {
-  const { signOut, isOwner, isAdmin, userRole, user } = useAuth();
+  // Estado para verificar si el usuario es owner
+  const [isOwner, setIsOwner] = useState(false);
   
-  console.log('Sidebar - Auth State:', { isOwner, isAdmin, userRole, userId: user?.id });
+  // Verificar si el usuario es owner
+  useEffect(() => {
+    const checkUserRole = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) return;
+        
+        // Obtener el perfil del usuario
+        const { data: profileData } = await supabase
+          .from('user_profiles')
+          .select('role_id')
+          .eq('id', user.id)
+          .single();
+          
+        if (profileData && profileData.role_id) {
+          // Obtener el nombre del rol
+          const { data: roleData } = await supabase
+            .from('user_roles')
+            .select('name')
+            .eq('id', profileData.role_id)
+            .single();
+            
+          // Verificar si el usuario es owner
+          setIsOwner(roleData?.name === 'owner');
+        }
+      } catch (error) {
+        console.error('Error al verificar rol:', error);
+      }
+    };
+    
+    checkUserRole();
+  }, []);
   
   return (
     <TooltipProvider>
@@ -38,14 +72,22 @@ export default function Sidebar() {
           <NavItem to="/land-analysis" icon={<Trees className="h-5 w-5 text-green-600" />} label="Terrenos en Venta" />
           <NavItem to="/rental-analysis" icon={<Building2 className="h-5 w-5 text-purple-600" />} label="Propiedades en Renta" />
           <NavItem to="/fraccionamientos" icon={<LayoutGrid className="h-5 w-5 text-amber-600" />} label="Fraccionamientos" />
-          <NavItem to="/config" icon={<Settings className="h-5 w-5 text-gray-600" />} label="Configuración" />
+          {isOwner && (
+            <NavItem to="/config" icon={<Settings className="h-5 w-5 text-gray-600" />} label="Configuración" />
+          )}
           
           <div className="flex-1" />
           
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-                onClick={signOut}
+                onClick={() => {
+                  if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+                    supabase.auth.signOut().then(() => {
+                      window.location.href = '/login';
+                    });
+                  }
+                }}
                 className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-red-100 hover:text-red-600 text-muted-foreground md:h-8 md:w-8"
               >
                 <LogOut className="h-5 w-5" />

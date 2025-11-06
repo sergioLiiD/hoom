@@ -7,113 +7,213 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [userRole, setUserRole] = useState(null);
   const [loading, setLoading] = useState(true);
+  
+  console.log('AuthProvider initialized');
 
   useEffect(() => {
-    // Función para obtener el usuario actual
+    console.log('AuthProvider useEffect running');
+    
+    // Función para obtener el rol del usuario con reintentos
+    const getUserRole = async (userId, retryCount = 0) => {
+      try {
+        console.log(`Getting role for user: ${userId} (intento ${retryCount + 1})`);
+        
+        // Consulta directa para obtener el rol y el nombre del rol en una sola consulta
+        const { data, error } = await supabase
+          .rpc('get_user_role_info', { user_id: userId });
+        
+        if (error) {
+          console.error('Error getting user role info:', error);
+          
+          // Si es un error de RPC no encontrado, intentamos el fallback inmediatamente
+          if (error.message.includes('function') && error.message.includes('does not exist')) {
+            console.log('RPC function not found, using fallback immediately');
+          } else if (retryCount < 2) {
+            // Reintentar hasta 3 veces con un retraso exponencial
+            const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+            console.log(`Retrying in ${delay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            return getUserRole(userId, retryCount + 1);
+          } else {
+            console.log('Max retries reached, using fallback');
+          }
+        } else if (data && data.role_id) {
+          console.log('User role info retrieved:', data);
+          return {
+            id: data.role_id,
+            name: data.role_name || 'user',
+            fullName: data.full_name,
+            is_active: data.is_active !== false // Si is_active es null o undefined, consideramos que está activo
+          };
+        }
+        
+        // Fallback a consultas separadas
+        console.log('Fallback: getting user profile directly');
+        const { data: profileData, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('role_id, full_name')
+          .eq('id', userId)
+          .single();
+        
+        if (profileError) {
+          console.error('Error getting user profile:', profileError);
+          
+          // Si el perfil no existe, intentamos crearlo con rol de usuario por defecto
+          if (profileError.code === 'PGRST116') { // No se encontraron resultados
+            console.log('Profile not found, attempting to create default profile');
+            
+            const { data: newProfile, error: createError } = await supabase
+              .from('user_profiles')
+              .insert({ id: userId, role_id: 3 })
+              .select()
+              .single();
+              
+            if (createError) {
+              console.error('Error creating default profile:', createError);
+              return { id: 3, name: 'user' };
+            }
+            
+            console.log('Default profile created:', newProfile);
+            return { id: 3, name: 'user', fullName: '', is_active: true };
+          }
+          
+          return { id: 3, name: 'user' };
+        }
+        
+        if (!profileData) {
+          console.error('No profile data found');
+          return { id: 3, name: 'user' };
+        }
+        
+        const roleId = profileData.role_id || 3;
+        let roleName = 'user';
+        
+        // Obtener el nombre del rol
+        const { data: roleData, error: roleError } = await supabase
+          .from('user_roles')
+          .select('name')
+          .eq('id', roleId)
+          .single();
+        
+        if (!roleError && roleData) {
+          roleName = roleData.name;
+        } else if (roleError) {
+          console.error('Error getting role name:', roleError);
+        }
+        
+        return {
+          id: roleId,
+          name: roleName,
+          fullName: profileData.full_name || '',
+          is_active: profileData.is_active !== false // Si is_active es null o undefined, consideramos que está activo
+        };
+      } catch (error) {
+        console.error('Error in getUserRole:', error);
+        
+        // Si hay un error inesperado y no hemos alcanzado el máximo de reintentos
+        if (retryCount < 2) {
+          const delay = Math.pow(2, retryCount) * 1000;
+          console.log(`Unexpected error, retrying in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          return getUserRole(userId, retryCount + 1);
+        }
+        
+        return { id: 3, name: 'user' };
+      }
+    };
+    
+    // Función para obtener el usuario actual con manejo mejorado de errores
     const getUser = async () => {
       try {
+        console.log('Getting current user');
         const { data: { user }, error } = await supabase.auth.getUser();
         
-        if (error || !user) {
+        if (error) {
+          console.error('Error getting user:', error);
           setUser(null);
           setUserRole(null);
           setLoading(false);
           return;
         }
-
+        
+        if (!user) {
+          console.log('No user found');
+          setUser(null);
+          setUserRole(null);
+          setLoading(false);
+          return;
+        }
+        
+        console.log('User found:', user.id);
         setUser(user);
-
-        // Obtener el perfil y rol del usuario
-        if (user) {
-          // Primero, intentamos obtener el perfil del usuario
-          const { data: profileData, error: profileError } = await supabase
-            .from('user_profiles')
-            .select('role_id, full_name')
-            .eq('id', user.id)
-            .single();
-
-          console.log('AuthContext - User profile data:', { profileData, profileError: profileError?.message });
-
-          if (!profileError && profileData) {
-            // Si tenemos el perfil, obtenemos el nombre del rol
-            const { data: roleData, error: roleError } = await supabase
-              .from('user_roles')
-              .select('name')
-              .eq('id', profileData.role_id)
-              .single();
-
-            console.log('AuthContext - User role data:', { roleData, roleError: roleError?.message });
-
-            setUserRole({
-              id: profileData.role_id,
-              name: roleData?.name || 'user',
-              fullName: profileData.full_name || user.email
-            });
-
-            console.log('AuthContext - Setting user role:', { 
-              id: profileData.role_id, 
-              name: roleData?.name || 'user',
-              isOwner: roleData?.name === 'owner'
-            });
-          } else {
-            setUserRole({ id: 3, name: 'user', fullName: user.email });
-          }
+        
+        try {
+          // Obtener el rol del usuario con reintentos
+          const role = await getUserRole(user.id);
+          console.log('Setting user role:', role);
+          setUserRole(role);
+        } catch (roleError) {
+          console.error('Error getting user role:', roleError);
+          // Si falla la obtención del rol, establecer un rol por defecto
+          setUserRole({ id: 3, name: 'user', is_active: true });
         }
       } catch (error) {
-        console.error('Error al obtener usuario:', error);
+        console.error('Unexpected error in getUser:', error);
+        setUser(null);
+        setUserRole(null);
       } finally {
         setLoading(false);
       }
     };
-
-    // Suscribirse a cambios en la autenticación
+    
+    // Suscribirse a cambios en la autenticación con manejo mejorado de errores
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event);
+        
         if (event === 'SIGNED_IN' && session) {
+          console.log('User signed in:', session.user.id);
           setUser(session.user);
-          // Obtener el perfil y rol del usuario
-          const { data: profileData, error: profileError } = await supabase
-            .from('user_profiles')
-            .select('role_id, full_name')
-            .eq('id', session.user.id)
-            .single();
-
-          console.log('AuthContext (onAuthStateChange) - User profile data:', { profileData, profileError: profileError?.message });
-
-          if (!profileError && profileData) {
-            // Si tenemos el perfil, obtenemos el nombre del rol
-            const { data: roleData, error: roleError } = await supabase
-              .from('user_roles')
-              .select('name')
-              .eq('id', profileData.role_id)
-              .single();
-
-            console.log('AuthContext (onAuthStateChange) - User role data:', { roleData, roleError: roleError?.message });
-
-            setUserRole({
-              id: profileData.role_id,
-              name: roleData?.name || 'user',
-              fullName: profileData.full_name || session.user.email
-            });
-
-            console.log('AuthContext (onAuthStateChange) - Setting user role:', { 
-              id: profileData.role_id, 
-              name: roleData?.name || 'user',
-              isOwner: roleData?.name === 'owner'
-            });
-          } else {
-            setUserRole({ id: 3, name: 'user', fullName: session.user.email });
+          
+          try {
+            // Obtener el rol del usuario con reintentos
+            const role = await getUserRole(session.user.id);
+            console.log('Setting user role after sign in:', role);
+            setUserRole(role);
+          } catch (roleError) {
+            console.error('Error getting user role after sign in:', roleError);
+            // Si falla la obtención del rol, establecer un rol por defecto
+            setUserRole({ id: 3, name: 'user', is_active: true });
           }
         } else if (event === 'SIGNED_OUT') {
+          console.log('User signed out');
           setUser(null);
           setUserRole(null);
+        } else if (event === 'TOKEN_REFRESHED') {
+          console.log('Token refreshed');
+          // Verificar si el usuario y el rol están correctamente establecidos
+          if (session && (!userRole || !userRole.id)) {
+            console.log('Refreshing user role after token refresh');
+            try {
+              const role = await getUserRole(session.user.id);
+              console.log('Setting user role after token refresh:', role);
+              setUserRole(role);
+            } catch (roleError) {
+              console.error('Error getting user role after token refresh:', roleError);
+            }
+          }
+        } else if (event === 'USER_UPDATED') {
+          console.log('User updated');
+          if (session) {
+            setUser(session.user);
+          }
         }
       }
     );
-
+    
     // Obtener el usuario al cargar la página
     getUser();
-
+    
     // Limpiar la suscripción al desmontar
     return () => {
       if (authListener && authListener.subscription) {
@@ -136,28 +236,16 @@ export function AuthProvider({ children }) {
   // Verificar si el usuario tiene un rol específico
   const hasRole = (role) => {
     if (!userRole) return false;
-    
-    // Si el usuario es owner, tiene todos los permisos
-    if (userRole.name === 'owner') return true;
-    
-    // Si el usuario es admin y el rol requerido es admin o user
-    if (userRole.name === 'admin' && (role === 'admin' || role === 'user')) return true;
-    
-    // Si el rol del usuario coincide con el rol requerido
     return userRole.name === role;
   };
-
-  // Determinar los roles basados en userRole.name
-  const isOwnerRole = userRole?.name?.toLowerCase() === 'owner';
-  const isAdminRole = userRole?.name?.toLowerCase() === 'admin' || isOwnerRole;
   
-  console.log('AuthContext - Roles:', { 
-    userRole, 
-    isOwnerRole, 
-    isAdminRole,
-    roleName: userRole?.name,
-    roleId: userRole?.id
-  });
+  // Verificar si el usuario está activo
+  const isOwnerRole = userRole?.name === 'owner';
+  const isAdminRole = userRole?.name === 'admin';
+  const isActive = userRole?.is_active !== false;
+  
+  // Obtener el usuario al cargar la página
+  getUser();
   
   const value = {
     user,
@@ -167,6 +255,7 @@ export function AuthProvider({ children }) {
     hasRole,
     isOwner: isOwnerRole,
     isAdmin: isAdminRole,
+    isActive,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
