@@ -12,6 +12,10 @@ import LoginPage from "@/pages/LoginPage";
 import RegisterPage from "@/pages/RegisterPage";
 import TestSupabase from "@/pages/TestSupabase";
 import ForceLogoutPage from "@/pages/ForceLogoutPage";
+import EmergencyAccess from "@/pages/EmergencyAccess";
+import InvitationDiagnostic from "@/pages/InvitationDiagnostic";
+import UserManagement from "@/pages/UserManagement";
+import SystemInfo from "@/pages/SystemInfo";
 import ConfigPage from "@/pages/ConfigPage";
 import FixRolePage from "@/pages/FixRolePage";
 import LogoutPage from "@/pages/LogoutPage";
@@ -30,10 +34,13 @@ function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/test-supabase" element={<TestSupabase />} />
           <Route path="/force-logout" element={<ForceLogoutPage />} />
+          <Route path="/emergency" element={<EmergencyAccess />} />
           <Route path="/fix-role" element={<FixRolePage />} />
           <Route path="/logout" element={<LogoutPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/update-password" element={<UpdatePasswordPage />} />
+          <Route path="/invitation-diagnostic" element={<InvitationDiagnostic />} />
+          <Route path="/system-info" element={<SystemInfo />} />
           
           {/* Rutas protegidas */}
           <Route path="/" element={
@@ -76,6 +83,13 @@ function App() {
           <Route path="/config" element={
             <ProtectedRoute requiredRole="owner">
               <Layout><ConfigPage /></Layout>
+            </ProtectedRoute>
+          } />
+          
+          {/* Ruta de gestión de usuarios (solo para owners) */}
+          <Route path="/users" element={
+            <ProtectedRoute requiredRole="owner">
+              <Layout><UserManagement /></Layout>
             </ProtectedRoute>
           } />
           

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Home, Users, Map, LineChart, Trees, Building2, LayoutGrid, Settings, LogOut } from "lucide-react";
+import { Home, Users, Map, LineChart, Trees, Building2, LayoutGrid, Settings, LogOut, UserCog } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/lib/supabaseClient";
@@ -73,7 +73,10 @@ export default function Sidebar() {
           <NavItem to="/rental-analysis" icon={<Building2 className="h-5 w-5 text-purple-600" />} label="Propiedades en Renta" />
           <NavItem to="/fraccionamientos" icon={<LayoutGrid className="h-5 w-5 text-amber-600" />} label="Fraccionamientos" />
           {isOwner && (
-            <NavItem to="/config" icon={<Settings className="h-5 w-5 text-gray-600" />} label="Configuración" />
+            <>
+              <NavItem to="/config" icon={<Settings className="h-5 w-5 text-gray-600" />} label="Configuración" />
+              <NavItem to="/users" icon={<UserCog className="h-5 w-5 text-red-600" />} label="Gestionar Usuarios" />
+            </>
           )}
           
           <div className="flex-1" />

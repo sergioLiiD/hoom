@@ -7,6 +7,8 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [userRole, setUserRole] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshAttempts, setRefreshAttempts] = useState(0);
+  const [lastRefreshError, setLastRefreshError] = useState(null);
   
   console.log('AuthProvider initialized');
 
@@ -126,17 +128,40 @@ export function AuthProvider({ children }) {
     const getUser = async () => {
       try {
         console.log('Getting current user');
-        const { data: { user }, error } = await supabase.auth.getUser();
+        // Primero intentamos obtener la sesión completa
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
         
-        if (error) {
-          console.error('Error getting user:', error);
+        if (sessionError) {
+          console.error('Error getting session:', sessionError);
+          // Intentar recuperar solo el usuario como fallback
+          const { data: { user: fallbackUser }, error: userError } = await supabase.auth.getUser();
+          
+          if (userError || !fallbackUser) {
+            console.error('Error getting user after session failure:', userError);
+            setUser(null);
+            setUserRole(null);
+            setLoading(false);
+            return;
+          }
+          
+          // Si pudimos obtener el usuario pero no la sesión
+          console.log('Retrieved user without session:', fallbackUser.id);
+          setUser(fallbackUser);
+        } else if (!sessionData.session) {
+          console.log('No active session found');
           setUser(null);
           setUserRole(null);
           setLoading(false);
           return;
+        } else {
+          // Si tenemos una sesión v��lida
+          const user = sessionData.session.user;
+          console.log('User found from session:', user.id);
+          setUser(user);
         }
         
-        if (!user) {
+        // A partir de aquí, user debería estar establecido si hay un usuario autenticado
+        if (!user && !sessionData?.session?.user) {
           console.log('No user found');
           setUser(null);
           setUserRole(null);
@@ -144,12 +169,14 @@ export function AuthProvider({ children }) {
           return;
         }
         
-        console.log('User found:', user.id);
-        setUser(user);
+        // Usar el usuario de la sesión si está disponible, o el usuario ya establecido
+        const currentUser = sessionData?.session?.user || user;
         
         try {
           // Obtener el rol del usuario con reintentos
-          const role = await getUserRole(user.id);
+          const userId = currentUser.id;
+          console.log('Getting role for user:', userId);
+          const role = await getUserRole(userId);
           console.log('Setting user role:', role);
           setUserRole(role);
         } catch (roleError) {
@@ -192,14 +219,39 @@ export function AuthProvider({ children }) {
         } else if (event === 'TOKEN_REFRESHED') {
           console.log('Token refreshed');
           // Verificar si el usuario y el rol están correctamente establecidos
-          if (session && (!userRole || !userRole.id)) {
+          if (session) {
             console.log('Refreshing user role after token refresh');
             try {
+              // Asegurarse de que el usuario está establecido
+              setUser(session.user);
+              
+              // Intentar obtener el rol del usuario con manejo de errores mejorado
               const role = await getUserRole(session.user.id);
               console.log('Setting user role after token refresh:', role);
               setUserRole(role);
             } catch (roleError) {
               console.error('Error getting user role after token refresh:', roleError);
+              // Si falla la obtención del rol, establecer un rol por defecto para evitar un estado inconsistente
+              setUserRole(userRole || { id: 3, name: 'user', is_active: true });
+              setLastRefreshError(roleError);
+            }
+          } else {
+            console.warn('Token refreshed but no session available');
+            // Intentar recuperar la sesión con el mecanismo de recuperación
+            const recovered = await recoverSession();
+            if (!recovered && refreshAttempts < 3) {
+              console.log(`Recovery attempt ${refreshAttempts + 1} failed, trying again...`);
+              // Esperar un poco antes de intentar de nuevo
+              setTimeout(() => {
+                getUser();
+              }, 1000 * Math.pow(2, refreshAttempts)); // Backoff exponencial: 1s, 2s, 4s
+            } else if (!recovered) {
+              console.error('Failed to recover session after multiple attempts');
+              // Redirigir al usuario a la página de emergencia después de varios intentos fallidos
+              if (window.location.pathname !== '/emergency' && window.location.pathname !== '/login') {
+                console.log('Redirecting to emergency page due to persistent session issues');
+                window.location.href = '/emergency';
+              }
             }
           }
         } else if (event === 'USER_UPDATED') {
@@ -222,12 +274,55 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
+  // Función para recuperar la sesión en caso de error
+  const recoverSession = async () => {
+    try {
+      console.log('Attempting to recover session...');
+      setRefreshAttempts(prev => prev + 1);
+      
+      // Intentar obtener la sesión actual
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('Error recovering session:', sessionError);
+        setLastRefreshError(sessionError);
+        return false;
+      }
+      
+      if (!sessionData.session) {
+        console.log('No session available for recovery');
+        return false;
+      }
+      
+      // Si tenemos una sesión, actualizar el estado
+      setUser(sessionData.session.user);
+      
+      // Intentar obtener el rol del usuario
+      try {
+        const role = await getUserRole(sessionData.session.user.id);
+        setUserRole(role);
+        console.log('Session recovered successfully');
+        return true;
+      } catch (roleError) {
+        console.error('Error getting role during recovery:', roleError);
+        setUserRole({ id: 3, name: 'user', is_active: true });
+        return true; // Consideramos que se recuperó parcialmente
+      }
+    } catch (error) {
+      console.error('Unexpected error during session recovery:', error);
+      setLastRefreshError(error);
+      return false;
+    }
+  };
+  
   // Función para cerrar sesión
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
       setUser(null);
       setUserRole(null);
+      setRefreshAttempts(0);
+      setLastRefreshError(null);
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
     }
@@ -244,9 +339,6 @@ export function AuthProvider({ children }) {
   const isAdminRole = userRole?.name === 'admin';
   const isActive = userRole?.is_active !== false;
   
-  // Obtener el usuario al cargar la página
-  getUser();
-  
   const value = {
     user,
     userRole,
@@ -256,6 +348,9 @@ export function AuthProvider({ children }) {
     isOwner: isOwnerRole,
     isAdmin: isAdminRole,
     isActive,
+    recoverSession,
+    refreshAttempts,
+    lastRefreshError,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Users, Mail, ShieldCheck, UserPlus, Check, X, Clock, RefreshCw, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { getAppUrl } from '@/config/appConfig';
 
 export default function ConfigPage() {
   const [activeSection, setActiveSection] = useState('invitations');
@@ -498,14 +499,14 @@ export default function ConfigPage() {
                           <input 
                             type="text" 
                             readOnly 
-                            value={`${window.location.origin}/register?code=${invitationResult.code}`}
+                            value={getAppUrl(`/register?code=${invitationResult.code}`)}
                             className="text-xs p-2 flex-1 bg-white border border-green-200 rounded-l-md focus:outline-none"
                           />
                           <Button
                             size="sm"
                             className="rounded-l-none bg-green-600 hover:bg-green-700"
                             onClick={() => {
-                              navigator.clipboard.writeText(`${window.location.origin}/register?code=${invitationResult.code}`);
+                              navigator.clipboard.writeText(getAppUrl(`/register?code=${invitationResult.code}`));
                               alert('Enlace copiado al portapapeles');
                             }}
                           >
@@ -605,7 +606,7 @@ export default function ConfigPage() {
                                           variant="outline"
                                           className="flex items-center gap-1"
                                           onClick={() => {
-                                            navigator.clipboard.writeText(`${window.location.origin}/register?code=${invitation.invitation_code}`);
+                                            navigator.clipboard.writeText(getAppUrl(`/register?code=${invitation.invitation_code}`));
                                             alert('Enlace copiado al portapapeles');
                                           }}
                                         >

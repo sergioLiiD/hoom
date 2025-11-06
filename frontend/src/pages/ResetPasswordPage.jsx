@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { getAppUrl } from '@/config/appConfig';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
@@ -25,7 +26,7 @@ export default function ResetPasswordPage() {
     try {
       // Enviar correo de restablecimiento de contraseña
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/update-password`,
+        redirectTo: getAppUrl('/update-password'),
       });
 
       if (error) throw error;
