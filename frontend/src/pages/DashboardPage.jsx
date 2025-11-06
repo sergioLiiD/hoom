@@ -5,6 +5,7 @@ import PropertyList from "@/components/PropertyList";
 import Filters from "@/components/Filters";
 import { supabase } from "@/lib/supabaseClient";
 import logo from '@/assets/logo-hoom.png';
+import MetricsCards from '@/components/MetricsCards';
 
 export default function DashboardPage() {
   const [view, setView] = useState('grid');
@@ -137,6 +138,12 @@ export default function DashboardPage() {
       <div className="sticky top-0 z-10 bg-background py-4">
         <Filters filters={filters} setFilters={setFilters} portals={portals} promoters={promoters} />
       </div>
+      
+      {/* Tarjetas de métricas */}
+      <div className="w-full my-4">
+        <MetricsCards />
+      </div>
+      
       <PropertyList properties={filteredProperties} promoters={promoters} fraccionamientos={fraccionamientos} onDataChange={fetchData} view={view} />
     </>
   )

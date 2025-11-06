@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
-export default function CollapsibleFilters({ title, children, defaultOpen = true, className = '' }) {
+export default function CollapsibleFilters({ title, children, defaultOpen = false, className = '' }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (

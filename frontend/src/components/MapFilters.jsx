@@ -9,7 +9,7 @@ import { ChevronUp, ChevronDown } from 'lucide-react';
 import logo from '@/assets/logo-hoom.png';
 
 const MapFilters = ({ filters, onFilterChange, onApplyFilters }) => {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
   const [localFilters, setLocalFilters] = useState(filters);
   
   // Actualizar localFilters cuando cambian los filtros externos

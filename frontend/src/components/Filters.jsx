@@ -17,7 +17,7 @@ const FilterGroup = ({ title, children, className = "" }) => (
 export default function Filters({ filters, setFilters, portals = [], promoters = [] }) {
   const [isMobile, setIsMobile] = useState(false);
   const [open, setOpen] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
   
   useEffect(() => {
     const checkIfMobile = () => {

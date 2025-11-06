@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Settings, LogOut } from 'lucide-react';
 import { Button } from './ui/button';
+import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -10,12 +11,14 @@ const navItems = [
   { name: 'Terrenos', path: '/land-analysis' },
   { name: 'Renta', path: '/rental-analysis' },
   { name: 'Mapa', path: '/map' },
+  { name: 'Configuración', path: '/config' },
 ];
 
 export default function MobileNav() {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
+  const { signOut, isOwner, isAdmin } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -68,6 +71,17 @@ export default function MobileNav() {
               {item.name}
             </Link>
           ))}
+          
+          <div className="flex-1 min-h-[40px]" />
+          
+          <Button
+            variant="outline"
+            className="flex items-center justify-center gap-2 text-red-600 hover:bg-red-50 border-red-200"
+            onClick={signOut}
+          >
+            <LogOut className="h-5 w-5" />
+            Cerrar sesión
+          </Button>
         </div>
       </div>
     </>

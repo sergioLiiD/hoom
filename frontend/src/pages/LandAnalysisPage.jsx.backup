@@ -229,7 +229,7 @@ const RentalAnalysisPage = () => {
         </div>
   
         {/* Filtros de Propiedades - Arriba */}
-        <CollapsibleFilters title="Filtros de Propiedades" defaultOpen={true} className="w-full">
+        <CollapsibleFilters title="Filtros de Propiedades" defaultOpen={false} className="w-full">
           <PropertyFilters 
             filters={filters} 
             setFilters={setFilters} 

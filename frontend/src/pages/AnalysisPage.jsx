@@ -21,6 +21,7 @@ const AnalysisPage = () => {
   const [loading, setLoading] = useState(true);
   const [medianPricePerSqm, setMedianPricePerSqm] = useState(0);
   const [medianPrice, setMedianPrice] = useState(0);
+  const [avgDaysOnMarket, setAvgDaysOnMarket] = useState(0);
   const [viewingProperty, setViewingProperty] = useState(null);
 
   const parsePrompt = (prompt) => {
@@ -88,7 +89,8 @@ const AnalysisPage = () => {
       let query = supabase.from('properties')
         .select('*, promoter_id(*), fraccionamientos (nombre)')
         .eq('property_type', 'casa')
-        .eq('listing_type', 'venta');
+        .eq('listing_type', 'venta')
+        .order('created_at', { ascending: false }); // Ordenar de la más reciente a la más antigua
 
       if (filters.minPrice) query = query.gte('price', filters.minPrice);
       if (filters.maxPrice) query = query.lte('price', filters.maxPrice);
@@ -108,9 +110,77 @@ const AnalysisPage = () => {
 
       if (error) throw error;
 
-      setProperties(data || []);
+      // Calcular los días en el mercado actualizados para cada propiedad
+      const today = new Date();
+      const processedData = (data || []).map(prop => {
+        let currentDaysOnMarket = prop.days_on_market || 0;
+        let isNew = false;
+        
+        // Si tenemos publication_date, calculamos los días en el mercado actualizados
+        if (prop.publication_date) {
+          const pubDate = new Date(prop.publication_date);
+          const diffTime = Math.abs(today - pubDate);
+          currentDaysOnMarket = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        } 
+        // Si no tenemos publication_date pero sí days_on_market, sumamos los días desde la captura
+        else if (prop.days_on_market && prop.created_at) {
+          const captureDate = new Date(prop.created_at);
+          const daysSinceCapture = Math.ceil(Math.abs(today - captureDate) / (1000 * 60 * 60 * 24));
+          currentDaysOnMarket = prop.days_on_market + daysSinceCapture;
+        }
+        
+        // Marcar como nueva si tiene menos de 7 días en el mercado
+        isNew = currentDaysOnMarket < 7;
+        
+        return {
+          ...prop,
+          currentDaysOnMarket,
+          isNew
+        };
+      });
+      
+      // Ordenar las propiedades por fecha de publicación (más reciente primero)
+      const sortedData = [...processedData];
+      sortedData.sort((a, b) => {
+        // Obtener fecha de publicación para la propiedad a
+        let pubDateA;
+        if (a.publication_date) {
+          pubDateA = new Date(a.publication_date);
+        } else if (a.days_on_market && a.created_at) {
+          pubDateA = new Date(a.created_at);
+          pubDateA.setDate(pubDateA.getDate() - a.days_on_market);
+        } else {
+          pubDateA = new Date(a.created_at || 0);
+        }
+        
+        // Obtener fecha de publicación para la propiedad b
+        let pubDateB;
+        if (b.publication_date) {
+          pubDateB = new Date(b.publication_date);
+        } else if (b.days_on_market && b.created_at) {
+          pubDateB = new Date(b.created_at);
+          pubDateB.setDate(pubDateB.getDate() - b.days_on_market);
+        } else {
+          pubDateB = new Date(b.created_at || 0);
+        }
+        
+        // Ordenar por fecha de publicación (más reciente primero)
+        return pubDateB - pubDateA;
+      });
+
+      setProperties(sortedData);
       
       if (data?.length > 0) {
+        // Calcular el promedio de días en el mercado con los valores actualizados
+        const propertiesWithDays = sortedData.filter(p => p.currentDaysOnMarket > 0);
+        if (propertiesWithDays.length > 0) {
+          const totalDays = propertiesWithDays.reduce((sum, p) => sum + p.currentDaysOnMarket, 0);
+          const avgDays = totalDays / propertiesWithDays.length;
+          setAvgDaysOnMarket(avgDays);
+        } else {
+          setAvgDaysOnMarket(0);
+        }
+        
         const pricedProperties = data.filter(p => p.price != null);
         if (pricedProperties.length > 0) {
           const sortedPrices = pricedProperties.map(p => p.price).sort((a, b) => a - b);
@@ -157,7 +227,7 @@ const AnalysisPage = () => {
     <div className="w-full max-w-full px-4 mx-auto">
       <div className="w-full space-y-6">
         {/* Filtros de Propiedades - Arriba */}
-        <CollapsibleFilters title="Filtros de Propiedades" defaultOpen={true} className="w-full">
+        <CollapsibleFilters title="Filtros de Propiedades" defaultOpen={false} className="w-full">
           <PropertyFilters 
             filters={filters} 
             setFilters={setFilters} 
@@ -184,7 +254,7 @@ const AnalysisPage = () => {
             </div>
           ) : (
             <div className="mt-4">
-              <div className="grid gap-4 md:grid-cols-3 mb-4">
+              <div className="grid gap-4 md:grid-cols-4 mb-4">
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Propiedades Encontradas</CardTitle>
@@ -207,6 +277,14 @@ const AnalysisPage = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">{medianPricePerSqm.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Promedio Días en Mercado</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{avgDaysOnMarket.toFixed(1)} días</div>
                   </CardContent>
                 </Card>
               </div>
@@ -234,12 +312,17 @@ const AnalysisPage = () => {
                             <TableHead className="w-20">Terr. (m²)</TableHead>
                             <TableHead className="w-16">1/2 B</TableHead>
                             <TableHead className="w-16">Niv.</TableHead>
+                            <TableHead className="w-20">Días en Mercado</TableHead>
+                            <TableHead className="w-24">Fecha Publicación</TableHead>
                             <TableHead className="w-20">Acciones</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {properties.map((prop, index) => (
-                            <TableRow key={prop.id} className="text-sm">
+                            <TableRow 
+                              key={prop.id} 
+                              className={`text-sm ${prop.isNew ? 'bg-slate-50' : ''}`}
+                            >
                               <TableCell className="p-2">{index + 1}</TableCell>
                               <TableCell className="p-2">
                                 <img 
@@ -278,6 +361,27 @@ const AnalysisPage = () => {
                               <TableCell className="p-2">{prop.land_area_m2 || '-'}</TableCell>
                               <TableCell className="p-2">{prop.half_bathrooms || '-'}</TableCell>
                               <TableCell className="p-2">{prop.levels || '-'}</TableCell>
+                              <TableCell className="p-2">
+                                {prop.isNew ? 
+                                  <span className="text-green-500 font-medium">Nueva</span> : 
+                                  prop.currentDaysOnMarket
+                                }
+                              </TableCell>
+                              <TableCell className="p-2 text-xs">
+                                {(() => {
+                                  // Calcular y mostrar la fecha de publicación
+                                  let pubDate;
+                                  if (prop.publication_date) {
+                                    pubDate = new Date(prop.publication_date);
+                                  } else if (prop.days_on_market && prop.created_at) {
+                                    pubDate = new Date(prop.created_at);
+                                    pubDate.setDate(pubDate.getDate() - prop.days_on_market);
+                                  } else {
+                                    return '-';
+                                  }
+                                  return pubDate.toLocaleDateString('es-MX');
+                                })()} 
+                              </TableCell>
                               <TableCell className="p-2">
                                 <Button 
                                   variant="outline" 
