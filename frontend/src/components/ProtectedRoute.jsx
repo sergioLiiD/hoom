@@ -5,10 +5,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 
 export default function ProtectedRoute({ children, requiredRole = null }) {
-  const { user, userRole, loading, isOwner, isActive, lastRefreshError, recoverSession } = useAuth();
+  const { user, userRole, loading, isOwner, isActive } = useAuth();
   const location = useLocation();
-  const [isRecovering, setIsRecovering] = useState(false);
-  const [recoveryAttempted, setRecoveryAttempted] = useState(false);
 
   console.log('ProtectedRoute - Using AuthContext:', { 
     user: user?.id, 
@@ -16,45 +14,16 @@ export default function ProtectedRoute({ children, requiredRole = null }) {
     loading,
     isOwner,
     isActive,
-    requiredRole,
-    hasRefreshError: !!lastRefreshError
+    requiredRole
   });
   
-  // Intentar recuperar la sesión si hay un error de token refresh
-  useEffect(() => {
-    const attemptRecovery = async () => {
-      if (lastRefreshError && !recoveryAttempted) {
-        console.log('ProtectedRoute - Attempting to recover from token refresh error');
-        setIsRecovering(true);
-        setRecoveryAttempted(true);
-        
-        try {
-          const recovered = await recoverSession();
-          if (!recovered) {
-            console.log('ProtectedRoute - Recovery failed, redirecting to emergency page');
-            window.location.href = '/emergency?refresh_error=true';
-          } else {
-            console.log('ProtectedRoute - Recovery successful');
-          }
-        } catch (error) {
-          console.error('ProtectedRoute - Error during recovery:', error);
-          window.location.href = '/emergency?refresh_error=true';
-        } finally {
-          setIsRecovering(false);
-        }
-      }
-    };
-    
-    attemptRecovery();
-  }, [lastRefreshError, recoveryAttempted, recoverSession]);
-
-  // Mostrar un loader mientras se verifica la autenticación o se recupera la sesión
-  if (loading || isRecovering) {
+  // Mostrar loader mientras se verifica la autenticación
+  if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
         <p className="mt-4 text-sm text-muted-foreground">
-          {isRecovering ? 'Recuperando sesión...' : 'Verificando autenticación...'}
+          Verificando autenticación...
         </p>
       </div>
     );

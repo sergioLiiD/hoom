@@ -25,9 +25,7 @@ export default function LoginPage() {
       console.log('Intentando iniciar sesión con:', { email });
       console.log('Llamando a supabase.auth.signInWithPassword');
       
-      // Limpiar el almacenamiento local antes de intentar iniciar sesión
-      // Esto puede ayudar si hay tokens obsoletos o corruptos
-      localStorage.removeItem('supabase.auth.token');
+      // No limpiamos localStorage - dejamos que Supabase maneje la persistencia
       
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
