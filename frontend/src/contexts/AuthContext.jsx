@@ -12,18 +12,31 @@ export function AuthProvider({ children }) {
     // Función simple para obtener el rol del usuario
     const getUserRole = async (userId) => {
       try {
-        const { data, error } = await supabase
+        // Primero obtener el role_id del perfil
+        const { data: profileData, error: profileError } = await supabase
           .from('user_profiles')
-          .select('role_id, roles(name, is_active)')
+          .select('role_id')
           .eq('id', userId)
           .single();
 
-        if (error || !data?.roles) {
+        if (profileError || !profileData) {
+          console.warn('No profile found, using default user role');
+          return { id: 3, name: 'user', is_active: true };
+        }
+
+        // Luego obtener el rol usando el role_id
+        const { data: roleData, error: roleError } = await supabase
+          .from('roles')
+          .select('id, name, is_active')
+          .eq('id', profileData.role_id)
+          .single();
+
+        if (roleError || !roleData) {
           console.warn('No role found, using default user role');
           return { id: 3, name: 'user', is_active: true };
         }
 
-        return data.roles;
+        return roleData;
       } catch (error) {
         console.error('Error getting user role:', error);
         return { id: 3, name: 'user', is_active: true };
