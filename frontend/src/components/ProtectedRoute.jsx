@@ -3,10 +3,12 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function ProtectedRoute({ children, requiredRole = null }) {
   const { user, userRole, loading, isOwner, isActive } = useAuth();
   const location = useLocation();
+  const [timeoutReached, setTimeoutReached] = useState(false);
 
   console.log('ProtectedRoute - Using AuthContext:', { 
     user: user?.id, 
@@ -16,6 +18,20 @@ export default function ProtectedRoute({ children, requiredRole = null }) {
     isActive,
     requiredRole
   });
+
+  // Timeout de seguridad: si lleva más de 15 segundos cargando, mostrar opción de salir
+  useEffect(() => {
+    if (loading) {
+      const timeout = setTimeout(() => {
+        console.warn('[ProtectedRoute] Loading timeout reached');
+        setTimeoutReached(true);
+      }, 15000);
+
+      return () => clearTimeout(timeout);
+    } else {
+      setTimeoutReached(false);
+    }
+  }, [loading]);
   
   // Mostrar loader mientras se verifica la autenticación
   if (loading) {
@@ -25,6 +41,36 @@ export default function ProtectedRoute({ children, requiredRole = null }) {
         <p className="mt-4 text-sm text-muted-foreground">
           Verificando autenticación...
         </p>
+        {timeoutReached && (
+          <div className="mt-6 p-4 border border-yellow-300 rounded-lg bg-yellow-50 max-w-md">
+            <p className="text-sm text-yellow-800 mb-2">
+              La verificación está tardando más de lo esperado.
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  // Limpiar sesión y redirigir a login
+                  await supabase.auth.signOut();
+                  window.location.href = '/login';
+                }}
+              >
+                Ir a Login
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  // Recargar la página
+                  window.location.reload();
+                }}
+              >
+                Recargar
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
