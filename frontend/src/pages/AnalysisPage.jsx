@@ -108,11 +108,72 @@ const AnalysisPage = () => {
 
       const { data, error } = await query;
 
+      // Filtrar por fecha de publicación si se especificó mes, año o rango de fechas
+      let filteredData = data || [];
+      if (filters.publicationMonth || filters.publicationYear || filters.publicationDateStart || filters.publicationDateEnd) {
+        filteredData = filteredData.filter(prop => {
+          let pubDate;
+          
+          // Calcular fecha de publicación
+          if (prop.publication_date) {
+            pubDate = new Date(prop.publication_date);
+          } else if (prop.days_on_market && prop.created_at) {
+            pubDate = new Date(prop.created_at);
+            pubDate.setDate(pubDate.getDate() - prop.days_on_market);
+          } else {
+            // Si no hay fecha de publicación, no incluimos la propiedad en el filtro
+            return false;
+          }
+          
+          // Filtrar por rango de fechas si está especificado
+          if (filters.publicationDateStart || filters.publicationDateEnd) {
+            const startDate = filters.publicationDateStart ? new Date(filters.publicationDateStart) : null;
+            const endDate = filters.publicationDateEnd ? new Date(filters.publicationDateEnd) : null;
+            
+            // Establecer hora a inicio del día para fecha de inicio
+            if (startDate) {
+              startDate.setHours(0, 0, 0, 0);
+            }
+            
+            // Establecer hora a fin del día para fecha de fin
+            if (endDate) {
+              endDate.setHours(23, 59, 59, 999);
+            }
+            
+            // Verificar si la fecha de publicación está dentro del rango
+            if (startDate && pubDate < startDate) {
+              return false;
+            }
+            if (endDate && pubDate > endDate) {
+              return false;
+            }
+          }
+          
+          // Filtrar por mes si está especificado (solo si no hay rango de fechas o si el rango permite este mes)
+          if (filters.publicationMonth) {
+            const propMonth = String(pubDate.getMonth() + 1).padStart(2, '0');
+            if (propMonth !== filters.publicationMonth) {
+              return false;
+            }
+          }
+          
+          // Filtrar por año si está especificado (solo si no hay rango de fechas o si el rango permite este año)
+          if (filters.publicationYear) {
+            const propYear = pubDate.getFullYear().toString();
+            if (propYear !== filters.publicationYear) {
+              return false;
+            }
+          }
+          
+          return true;
+        });
+      }
+
       if (error) throw error;
 
       // Calcular los días en el mercado actualizados para cada propiedad
       const today = new Date();
-      const processedData = (data || []).map(prop => {
+      const processedData = filteredData.map(prop => {
         let currentDaysOnMarket = prop.days_on_market || 0;
         let isNew = false;
         
@@ -181,7 +242,7 @@ const AnalysisPage = () => {
           setAvgDaysOnMarket(0);
         }
         
-        const pricedProperties = data.filter(p => p.price != null);
+        const pricedProperties = filteredData.filter(p => p.price != null);
         if (pricedProperties.length > 0) {
           const sortedPrices = pricedProperties.map(p => p.price).sort((a, b) => a - b);
           const mid = Math.floor(sortedPrices.length / 2);
@@ -224,7 +285,7 @@ const AnalysisPage = () => {
   }, [filters]);
 
   return (
-    <div className="w-full max-w-full px-4 mx-auto">
+    <div className="w-full max-w-full px-2 sm:px-4 mx-auto overflow-x-hidden">
       <div className="w-full space-y-6">
         {/* Filtros de Propiedades - Arriba */}
         <CollapsibleFilters title="Filtros de Propiedades" defaultOpen={false} className="w-full">
@@ -254,7 +315,7 @@ const AnalysisPage = () => {
             </div>
           ) : (
             <div className="mt-4">
-              <div className="grid gap-4 md:grid-cols-4 mb-4">
+              <div className="grid gap-2 sm:gap-4 grid-cols-2 md:grid-cols-4 mb-4">
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Propiedades Encontradas</CardTitle>
@@ -294,27 +355,27 @@ const AnalysisPage = () => {
                   <CardTitle>Resultados</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="relative max-h-[600px] overflow-auto">
-                    <div className="min-w-[1200px]">
-                      <Table>
+                  <div className="relative max-h-[600px] overflow-x-auto overflow-y-auto w-full">
+                    <div className="w-full">
+                      <Table className="w-full">
                         <TableHeader>
-                          <TableRow className="sticky top-0 bg-background">
-                            <TableHead className="w-12">#</TableHead>
-                            <TableHead className="w-16">Foto</TableHead>
-                            <TableHead className="min-w-[180px]">Título</TableHead>
-                            <TableHead className="min-w-[120px]">Promotor</TableHead>
-                            <TableHead className="min-w-[150px]">Fracc.</TableHead>
-                            <TableHead className="w-20">Portal</TableHead>
-                            <TableHead className="w-28">Precio</TableHead>
-                            <TableHead className="w-16">Habs.</TableHead>
-                            <TableHead className="w-16">Baños</TableHead>
-                            <TableHead className="w-20">Cons. (m²)</TableHead>
-                            <TableHead className="w-20">Terr. (m²)</TableHead>
-                            <TableHead className="w-16">1/2 B</TableHead>
-                            <TableHead className="w-16">Niv.</TableHead>
-                            <TableHead className="w-20">Días en Mercado</TableHead>
-                            <TableHead className="w-24">Fecha Publicación</TableHead>
-                            <TableHead className="w-20">Acciones</TableHead>
+                          <TableRow className="sticky top-0 bg-background z-10">
+                            <TableHead className="w-10 sm:w-12">#</TableHead>
+                            <TableHead className="w-12 sm:w-16">Foto</TableHead>
+                            <TableHead className="min-w-[120px] sm:min-w-[180px]">Título</TableHead>
+                            <TableHead className="min-w-[100px] sm:min-w-[120px]">Promotor</TableHead>
+                            <TableHead className="min-w-[100px] sm:min-w-[150px]">Fracc.</TableHead>
+                            <TableHead className="w-16 sm:w-20">Portal</TableHead>
+                            <TableHead className="w-20 sm:w-28">Precio</TableHead>
+                            <TableHead className="w-12 sm:w-16">Habs.</TableHead>
+                            <TableHead className="w-12 sm:w-16">Baños</TableHead>
+                            <TableHead className="w-16 sm:w-20">Cons. (m²)</TableHead>
+                            <TableHead className="w-16 sm:w-20">Terr. (m²)</TableHead>
+                            <TableHead className="w-12 sm:w-16">1/2 B</TableHead>
+                            <TableHead className="w-12 sm:w-16">Niv.</TableHead>
+                            <TableHead className="w-16 sm:w-20">Días</TableHead>
+                            <TableHead className="w-20 sm:w-24">Fecha Pub.</TableHead>
+                            <TableHead className="w-16 sm:w-20">Acciones</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -323,21 +384,21 @@ const AnalysisPage = () => {
                               key={prop.id} 
                               className={`text-sm ${prop.isNew ? 'bg-slate-50' : ''}`}
                             >
-                              <TableCell className="p-2">{index + 1}</TableCell>
-                              <TableCell className="p-2">
+                              <TableCell className="p-1 sm:p-2 text-xs sm:text-sm">{index + 1}</TableCell>
+                              <TableCell className="p-1 sm:p-2">
                                 <img 
                                   src={prop.photos?.[0] || 'https://via.placeholder.com/100x100.png?text=Sin+Foto'} 
                                   alt={prop.title} 
-                                  className="h-10 w-10 object-cover rounded-md" 
+                                  className="h-8 w-8 sm:h-10 sm:w-10 object-cover rounded-md" 
                                   referrerPolicy="no-referrer" 
                                 />
                               </TableCell>
-                              <TableCell className="p-2">{prop.title}</TableCell>
-                              <TableCell className="p-2">{prop.promoter_id?.name}</TableCell>
-                              <TableCell className="p-2">{prop.fraccionamientos?.nombre}</TableCell>
-                              <TableCell className="p-2">{prop.source_portal}</TableCell>
-                              <TableCell className="p-2">
-                                <div className="whitespace-nowrap">
+                              <TableCell className="p-1 sm:p-2 text-xs sm:text-sm max-w-[120px] sm:max-w-[180px] truncate" title={prop.title}>{prop.title}</TableCell>
+                              <TableCell className="p-1 sm:p-2 text-xs sm:text-sm max-w-[100px] sm:max-w-[120px] truncate" title={prop.promoter_id?.name}>{prop.promoter_id?.name || '-'}</TableCell>
+                              <TableCell className="p-1 sm:p-2 text-xs sm:text-sm max-w-[100px] sm:max-w-[150px] truncate" title={prop.fraccionamientos?.nombre}>{prop.fraccionamientos?.nombre || '-'}</TableCell>
+                              <TableCell className="p-1 sm:p-2 text-xs sm:text-sm">{prop.source_portal || '-'}</TableCell>
+                              <TableCell className="p-1 sm:p-2">
+                                <div className="whitespace-nowrap text-xs sm:text-sm">
                                   {prop.price ? prop.price.toLocaleString('es-MX', { 
                                     style: 'currency', 
                                     currency: 'MXN',
@@ -346,7 +407,7 @@ const AnalysisPage = () => {
                                   }) : 'N/D'}
                                 </div>
                                 {prop.price && prop.construction_area_m2 > 0 && (
-                                  <div className="text-xs text-muted-foreground">
+                                  <div className="text-[10px] sm:text-xs text-muted-foreground">
                                     {(prop.price / prop.construction_area_m2).toLocaleString('es-MX', { 
                                       style: 'currency', 
                                       currency: 'MXN', 
@@ -355,19 +416,19 @@ const AnalysisPage = () => {
                                   </div>
                                 )}
                               </TableCell>
-                              <TableCell className="p-2">{prop.bedrooms || '-'}</TableCell>
-                              <TableCell className="p-2">{prop.full_bathrooms || '-'}</TableCell>
-                              <TableCell className="p-2">{prop.construction_area_m2 || '-'}</TableCell>
-                              <TableCell className="p-2">{prop.land_area_m2 || '-'}</TableCell>
-                              <TableCell className="p-2">{prop.half_bathrooms || '-'}</TableCell>
-                              <TableCell className="p-2">{prop.levels || '-'}</TableCell>
-                              <TableCell className="p-2">
+                              <TableCell className="p-1 sm:p-2 text-xs sm:text-sm">{prop.bedrooms || '-'}</TableCell>
+                              <TableCell className="p-1 sm:p-2 text-xs sm:text-sm">{prop.full_bathrooms || '-'}</TableCell>
+                              <TableCell className="p-1 sm:p-2 text-xs sm:text-sm">{prop.construction_area_m2 || '-'}</TableCell>
+                              <TableCell className="p-1 sm:p-2 text-xs sm:text-sm">{prop.land_area_m2 || '-'}</TableCell>
+                              <TableCell className="p-1 sm:p-2 text-xs sm:text-sm">{prop.half_bathrooms || '-'}</TableCell>
+                              <TableCell className="p-1 sm:p-2 text-xs sm:text-sm">{prop.levels || '-'}</TableCell>
+                              <TableCell className="p-1 sm:p-2 text-xs sm:text-sm">
                                 {prop.isNew ? 
                                   <span className="text-green-500 font-medium">Nueva</span> : 
                                   prop.currentDaysOnMarket
                                 }
                               </TableCell>
-                              <TableCell className="p-2 text-xs">
+                              <TableCell className="p-1 sm:p-2 text-[10px] sm:text-xs">
                                 {(() => {
                                   // Calcular y mostrar la fecha de publicación
                                   let pubDate;
@@ -382,12 +443,12 @@ const AnalysisPage = () => {
                                   return pubDate.toLocaleDateString('es-MX');
                                 })()} 
                               </TableCell>
-                              <TableCell className="p-2">
+                              <TableCell className="p-1 sm:p-2">
                                 <Button 
                                   variant="outline" 
                                   size="sm" 
                                   onClick={() => setViewingProperty(prop)}
-                                  className="text-xs h-8 px-2"
+                                  className="text-[10px] sm:text-xs h-7 sm:h-8 px-1 sm:px-2"
                                 >
                                   Ver
                                 </Button>

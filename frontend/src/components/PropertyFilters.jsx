@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DatePicker } from "@/components/ui/date-picker";
 import { supabase } from '@/lib/supabaseClient';
 
 const PropertyFilters = ({ filters, setFilters, onFilter, hidePropertyTypeFilter = false, hideListingTypeFilter = false }) => {
@@ -54,6 +55,29 @@ const PropertyFilters = ({ filters, setFilters, onFilter, hidePropertyTypeFilter
     const { name, value } = e.target;
     setFilters(prev => ({ ...prev, [name]: value }));
   };
+
+  // Generar opciones de meses
+  const meses = [
+    { value: '01', label: 'Enero' },
+    { value: '02', label: 'Febrero' },
+    { value: '03', label: 'Marzo' },
+    { value: '04', label: 'Abril' },
+    { value: '05', label: 'Mayo' },
+    { value: '06', label: 'Junio' },
+    { value: '07', label: 'Julio' },
+    { value: '08', label: 'Agosto' },
+    { value: '09', label: 'Septiembre' },
+    { value: '10', label: 'Octubre' },
+    { value: '11', label: 'Noviembre' },
+    { value: '12', label: 'Diciembre' },
+  ];
+
+  // Generar opciones de años (últimos 5 años)
+  const currentYear = new Date().getFullYear();
+  const años = Array.from({ length: 5 }, (_, i) => {
+    const año = currentYear - i;
+    return { value: año.toString(), label: año.toString() };
+  });
 
   return (
     <div className="flex flex-col gap-4 p-4 border-b">
@@ -191,6 +215,64 @@ const PropertyFilters = ({ filters, setFilters, onFilter, hidePropertyTypeFilter
             </Select>
           </div>
         )}
+        <div>
+          <Label htmlFor="publicationMonth">Mes de Publicación</Label>
+          <Select
+            name="publicationMonth"
+            value={filters.publicationMonth || 'all'}
+            onValueChange={(value) => setFilters(prev => ({ ...prev, publicationMonth: value === 'all' ? undefined : value }))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Todos los meses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los meses</SelectItem>
+              {meses.map((mes) => (
+                <SelectItem key={mes.value} value={mes.value}>
+                  {mes.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="publicationYear">Año de Publicación</Label>
+          <Select
+            name="publicationYear"
+            value={filters.publicationYear || 'all'}
+            onValueChange={(value) => setFilters(prev => ({ ...prev, publicationYear: value === 'all' ? undefined : value }))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Todos los años" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los años</SelectItem>
+              {años.map((año) => (
+                <SelectItem key={año.value} value={año.value}>
+                  {año.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        <div>
+          <Label htmlFor="publicationDateStart">Fecha de Inicio (Publicación)</Label>
+          <DatePicker 
+            date={filters.publicationDateStart} 
+            setDate={(date) => setFilters(prev => ({ ...prev, publicationDateStart: date }))} 
+            placeholder="Seleccionar fecha de inicio"
+          />
+        </div>
+        <div>
+          <Label htmlFor="publicationDateEnd">Fecha de Fin (Publicación)</Label>
+          <DatePicker 
+            date={filters.publicationDateEnd} 
+            setDate={(date) => setFilters(prev => ({ ...prev, publicationDateEnd: date }))} 
+            placeholder="Seleccionar fecha de fin"
+          />
+        </div>
       </div>
       <Button onClick={onFilter}>Filtrar Propiedades</Button>
     </div>
